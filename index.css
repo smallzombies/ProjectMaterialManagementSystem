@@ -1,0 +1,163 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+    'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: #f5f6f8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.login-bg {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1f3b5c 0%, #2f5d8a 100%);
+}
+
+.login-card {
+  width: 380px;
+  padding: 32px 28px;
+}
+
+.login-title {
+  font-size: 20px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.login-sub {
+  text-align: center;
+  color: #8c8c8c;
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+
+.layout-shell {
+  height: 100vh;
+}
+
+.app-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 56px;
+  padding: 0 16px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.content-area {
+  padding: 16px;
+  overflow: auto;
+}
+
+@media (max-width: 768px) {
+  .content-area {
+    padding: 8px;
+  }
+
+  .login-bg {
+    padding: 16px;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .login-card {
+    width: 100%;
+    max-width: 400px;
+    padding: 28px 20px;
+  }
+
+  .login-card .ant-input-affix-wrapper,
+  .login-card .ant-btn {
+    height: 44px;
+    font-size: 15px;
+  }
+}
+
+.page-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.file-card {
+  position: relative;
+}
+
+.file-card-selected {
+  outline: 2px solid #1677ff;
+}
+
+.grid-item {
+  width: 100%;
+}
+
+.batch-bar {
+  position: fixed;
+  bottom: 24px;
+  z-index: 30;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  display: flex;
+  align-items: center;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.folder-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.pointer {
+  cursor: pointer;
+}
+
+.muted {
+  color: #999;
+  font-size: 12px;
+}
+
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scroll-y {
+  overflow-y: auto;
+  height: 100%;
+}
