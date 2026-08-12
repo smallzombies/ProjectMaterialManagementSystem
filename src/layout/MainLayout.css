@@ -1,0 +1,16 @@
+.layout-shell {
+  height: 100vh;
+}
+
+.app-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 56px;
+  padding: 0 16px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  overflow: hidden;
+  white-space: nowrap;
+}

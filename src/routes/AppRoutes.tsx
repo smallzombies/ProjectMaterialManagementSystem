@@ -1,25 +1,25 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { useApp } from './store/AppContext'
-import MainLayout from './layout/MainLayout'
-import Login from './pages/Login'
-import Home from './pages/Home'
-import Projects from './pages/Projects'
-import ProjectFiles from './pages/ProjectFiles'
-import Tags from './pages/Tags'
-import Points from './pages/Points'
-import Shares from './pages/Shares'
-import RecycleBin from './pages/RecycleBin'
-import Duplicates from './pages/Duplicates'
-import Models from './pages/Models'
-import Logs from './pages/Logs'
-import Users from './pages/admin/Users'
-import Units from './pages/admin/Units'
-import Roles from './pages/admin/Roles'
-import Transfer from './pages/admin/Transfer'
+import { useApp } from '../store/AppContext'
+import MainLayout from '../layout/MainLayout'
+import Login from '../pages/Login'
+import Home from '../pages/Home'
+import Projects from '../pages/Projects'
+import ProjectFiles from '../pages/ProjectFiles'
+import Tags from '../pages/Tags'
+import Points from '../pages/Points'
+import Shares from '../pages/Shares'
+import RecycleBin from '../pages/RecycleBin'
+import Duplicates from '../pages/Duplicates'
+import Models from '../pages/Models'
+import Logs from '../pages/Logs'
+import Users from '../pages/admin/Users'
+import Units from '../pages/admin/Units'
+import Roles from '../pages/admin/Roles'
+import Transfer from '../pages/admin/Transfer'
 
-function App() {
+function AppRoutes() {
   const { currentUser } = useApp()
-
+  
   if (!currentUser) {
     return (
       <Routes>
@@ -52,4 +52,4 @@ function App() {
   )
 }
 
-export default App
+export default AppRoutes
