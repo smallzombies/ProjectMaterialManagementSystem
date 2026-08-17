@@ -1,24 +1,1124 @@
+# Build artifacts
+dist/
+build/
+*.js.map
+*.ts.map
+
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
 # Logs
-logs
 *.log
+
+# Python (if applicable)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Coverage reports
+coverage/
+htmlcov/
+.coverage
+
+# IDE specific
+.vs/
+*.userprefs
+*.useroptions
+
+# Compressed files
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
+
+# Cache directories
+.cache/
+.cargo/
+.mypy_cache/
+.pytest_cache/
+.nyc_output/
+coverage/
+
+# Distribution / packaging
+.Python
+*.so
+.libs/
+.pyxblt*
+
+# Testing
+.pytest_cache/
+.hypothesis/
+
+# Documentation
+docs/_build/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+.ENV/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Local configuration files
+*.local
+
+# Rust (if applicable)
+target/
+
+# Java (if applicable)
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+*.hprof
+hs_err_pid*
+
+# C/C++ (if applicable)
+*.o
+*.a
+*.obj
+*.lib
+*.dll
+*.so
+*.dylib
+*.exe
+*.out
+*.ilk
+*.pdb
+*.res
+*.rsp
+*.sln
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Go (if applicable)
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Node.js (if applicable)
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+node_modules/
+jspm_packages/
 
-node_modules
-dist
-dist-ssr
-*.local
+# Bower dependency directory (if used)
+bower_components/
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# Grunt intermediate storage (if used)
+.grunt
+
+# Gulp intermediate storage (if used)
+gulp-cache/
+
+# Sass intermediate storage (if used)
+.sass-cache
+
+# Composer vendor folder (PHP)
+vendor/
+
+# Webpack
+webpack-stats.json
+stats.json
+
+# Browser-sync
+.browser-sync-tunnel/
+bs-config.json
+bs-scripts/
+
+# ESLint cache
+.eslintcache
+
+# Typescript output
+*.tsbuildinfo
+dist/
+out/
+lib/
+
+# Next.js
+.next/
+out/
+
+# Nuxt.js
+.nuxt/
+dist/
+
+# Vue.js
+dist/
+
+# React Native
+node_modules/
+.ReactNative
+.rnmetadata
+
+# Cordova plugin files
+*.cordova
+
+# Ionic
+ionic_*.min.js
+ionic_*.js
+
+# Electron
+release/
+dist-electron/
+
+# Tessel
+.tesselinclude
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask
+instance/
+.webassets-cache
+
+# Scrapy
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jython
+*.pyc
+
+# Dev artifacts
+dev/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtualenv
+venv/
+ENV/
+
+# Spyder project settings
+.spyproject/
+
+# Rope project settings
+.ropeproject/
+
+# mkdocs documentation
+/site/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre
+.pyre/
+
+# Pylance
+.vscode/.ropeproject/
+
+# Coverage
+.coverage.*
+htmlcov/
+
+# Profiling
+.profile
+
+# Temporary folders
+tmp/
+temp/
+
+# Lock files
+package-lock.json
+yarn.lock
+
+# IDE
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/recommendations.json
+
+# CI/CD
+.github/workflows/
+
+# Docker
+.dockerignore
+Dockerfile
+
+# Kubernetes
+.kubeconfig
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfvars
+
+# Ansible
+.retry
+
+# Vagrant
+.vagrant/
+
+# Puppet
+spec/fixtures/
+.bundle/
+
+# Gradle
+.gradle/
+build/
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+
+# SBT
+target/
+lib_managed/
+src_managed/
+project/project/
+*.sbt
+**/streams/
+**/early/
+dist/
+.cache/
+.cache_mill/
+
+# Leiningen
+target/
+**/pom.xml
+**/pom.properties
+**/BOOT-INF/
+
+# Clojure
+.classpath
+.dependency-classpath
+target/
+lib/
+lein-env
+.repl-*directory*
+.cpcache/
+.nrepl-port
+
+# Ruby
+*.gem
+*.rbc
+.bundle/
+.config/byebug_history
+.yardoc/
+_yardoc/
+doc/
+.rdoc-cache
+.coverage
+.coveralls.yml
+.rubocop.yml
+.rbenv-vars
+.rbenv-version
+.rbenv-gemsets
+.bundle/
+vendor/bundle
+Gemfile.lock
+
+# PHP
+composer.lock
+vendor/
+
+# Laravel
+bootstrap/cache/
+storage/
+.env
+
+# Symfony
+var/cache/
+var/logs/
+var/sessions/
+
+# WordPress
+wp-content/cache/
+wp-content/uploads/
+
+# Magento
+var/
+generated/
+pub/static/_cache/
+app/etc/config.php
+app/etc/env.php
+
+# Drupal
+sites/default/files/
+sites/default/private/
+config/sync/
+
+# Joomla
+administrator/logs/
+.cache/
+logs/
+
+# Dotfiles to store IDE state
+.idea/
+.vscode/
+.project
+.classpath
+.settings/
+
+# OS generated files
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Linux
+*~
+*.tmp
+*.bak
+*.save
+*.old
+*~
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+**/._*
+.Spotlight-V100
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.com.apple.FinderInfo
+.CFUserTextEncoding
+apdisk
+
+# Mobile
+*.mobileprovision
+*.ipa
+*.apk
+*.aab
+*.aab
+*.apks
+
+# Database
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.mdb
+*.accdb
+
+# Configuration
+config/
+settings/
+.envrc
+.gitlab-ci.yml
+
+# Secrets
+secrets/
+.secret
+*.secret
+
+# Backup files
+*.bak
+*.backup
+*.orig
+*.rej
+*.swp
+*.swo
+
+# Logs
+*.log
+.fuse_hidden*
+.lgitkeep
+
+# Temporary
+tmp/
+temp/
+*.tmp
+*.temp
+*~
+
+# Cache
+.cache/
+.cached/
+__pycache__/
+*.cache
+*.cached
+
+# Artifacts
+artifacts/
+artifact/
+
+# Snapshots
+.snapshots/
+*.snap
+
+# Reports
+reports/
+*.report
+*.xml
+
+# Output
+output/
+out/
+
+# Generated
+generated/
+gen/
+_gen/
+
+# Binaries
+bin/
+*.bin
+*.out
+*.exe
+*.dll
+*.so
+*.dylib
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+*.hprof
+hs_err_pid*
+
+# Libraries
+lib/
+libs/
+libraries/
+
+# Dependencies
+deps/
+dependencies/
+
+# Packages
+pkg/
+packages/
+
+# Archives
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+*.bz2
+*.xz
+*.iso
+*.dmg
+*.pkg
+
+# Images (if they're build artifacts)
+*.ico
+*.cur
+
+# Fonts
+*.ttf
+*.woff
+*.woff2
+*.eot
+*.svg
+
+# Documentation
+docs/
+
+# Examples
+examples/
+
+# Tests
+test/
+tests/
+spec/
+specs/
+
+# Benchmarks
+bench/
+benchmark/
+
+# Tools
+tools/
+scripts/
+
+# Assets
+assets/
+
+# Static
+static/
+
+# Public
+public/
+
+# Private
+private/
+
+# Config
+config/
+
+# Data
+data/
+dataset/
+datasets/
+
+# Models
+models/
+
+# Training
+training/
+
+# ML/DL
+*.model
+*.pb
+*.ckpt
+*.pth
+*.h5
+*.pkl
+
+# Conda
+conda-meta/
+envs/
+
+# Pipenv
+Pipfile.lock
+
+# Poetry
+poetry.lock
+
+# Pip
+requirements.txt
+
+# Virtual environment
+.venv/
+venv/
+env/
+ENV/
+
+# Pip cache
+pip-selfcheck.json
+*.egg-info/
+
+# Python
+*.py[cod]
+*$py.class
+*$pyc
+*$pyo
+.Python
+*.so
+.libs/
+.pyxblt*
+.pytest_cache/
+.hypothesis/
+
+# Coverage
+.coverage
+coverage.xml
+*.cover
+coverage/
+
+# Type checking
+*.mypy_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# Development
+dev/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Jupyter
+.ipynb_checkpoints
+
+# R
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+# Julia
+.julia/
+*.jl.bak
+
+# Racket
+compiled/
+deps/
+
+# Elixir
+mix.lock
+erl_crash.dump
+*.ez
+ebin/
+priv/
+_generated/
+.deps/
+.plt/
+
+# Erlang
+.erlang.cookie
+.eunit/
+.rebar/
+.rebar3/
+erl_crash.dump
+*.dump
+ebin/
+
+# Haskell
+dist/
+dist-newstyle/
+.cabal-sandbox/
+cabal.sandbox.config
+*.o
+*.hi
+*.chi
+*.chs.h
+*.dyn_o
+*.dyn_hi
+.hpc/
+.hsenv/
+.ghc.environment
+.cabal/packages/
+*.prof
+*.aux
+*.hp
+*.eventlog
+
+# Elm
+elm-stuff/
+*.elmi
+*.elmo
+
+# Nim
+nimcache/
+*.nimble
+*.nim.cfg
+
+# Scala
+*.class
+*.log
+.libs/
+Sessions/
+Session.vim
+.debug/
+
+# Clojure
+.classpath
+.dependency-classpath
+target/
+lib/
+lein-env
+.repl-*directory*
+.cpcache/
+.nrepl-port
+
+# Groovy
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+*.hprof
+hs_err_pid*
+
+# Kotlin
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+*.hprof
+hs_err_pid*
+*.kotlin_metadata
+*.kotlin_builtins
+
+# Dart
+.dart_tool/
+.packages
+*.dart.js
+*.dart.js.map
+build/
+
+# Flutter
+flutter/
+.dart_tool/
+.packages
+build/
+*.iws
+*.lock
+*.log
+*.patch
+*.tmp
+*.txt
+*.un~
+.DS_Store
+coverage/
+flutter_export_environment.sh
+ios/Flutter/flutter_assets/
+lib/
+linux/flutter/
+macos/Flutter/
+test/
+
+# Unity
+Library/
+Temp/
+Obj/
+Build/
+Logs/
+*.cs.meta
+*.prefab.meta
+*.unity.meta
+*.asset.meta
+*.mat.meta
+*.anim.meta
+*.controller.meta
+*.physicsMaterial2D.meta
+*.physicsMaterial.meta
+*.prefab.meta
+*.unity.meta
+*.asset.meta
+*.mat.meta
+*.anim.meta
+*.controller.meta
+*.physicsMaterial2D.meta
+*.physicsMaterial.meta
+*.shader.meta
+*.compute.meta
+*.meta
+*.guiskin.meta
+*.fontsettings.meta
+*.giparams.meta
+*.npys.meta
+*.physics.meta
+*.flare.meta
+*.mask.meta
+*.spriteatlas.meta
+*.ttf.meta
+*.otf.meta
+*.mat.meta
+*.cubemap.meta
+*.prefs.meta
+*.unityproj.meta
+*.anim.meta
+*.fbx.meta
+*.mb.meta
+*.ma.meta
+*.max.meta
+*.blend.meta
+*.dae.meta
+*.3ds.meta
+*.ase.meta
+*.obj.meta
+*.skp.meta
+*.wrl.meta
+*.ztl.meta
+*.asset.meta
+*.meta
+*.cginc.meta
+*.compute.meta
+*.shader.meta
+*.shadersubgraph.meta
+*.asmdef.meta
+*.rsp.meta
+*.raytrace.meta
+*.compute.meta
+*.shader.meta
+*.shadersubgraph.meta
+*.asmdef.meta
+*.rsp.meta
+*.raytrace.meta
+*.guiskin.meta
+*.fontsettings.meta
+*.giparams.meta
+*.npys.meta
+*.physics.meta
+*.flare.meta
+*.mask.meta
+*.spriteatlas.meta
+*.ttf.meta
+*.otf.meta
+*.mat.meta
+*.cubemap.meta
+*.prefs.meta
+*.unityproj.meta
+*.anim.meta
+*.fbx.meta
+*.mb.meta
+*.ma.meta
+*.max.meta
+*.blend.meta
+*.dae.meta
+*.3ds.meta
+*.ase.meta
+*.obj.meta
+*.skp.meta
+*.wrl.meta
+*.ztl.meta
+*.asset.meta
+*.meta
+*.cginc.meta
+*.compute.meta
+*.shader.meta
+*.shadersubgraph.meta
+*.asmdef.meta
+*.rsp.meta
+*.raytrace.meta
+*.compute.meta
+*.shader.meta
+*.shadersubgraph.meta
+*.asmdef.meta
+*.rsp.meta
+*.raytrace.meta
+*.guiskin.meta
+*.fontsettings.meta
+*.giparams.meta
+*.npys.meta
+*.physics.meta
+*.flare.meta
+*.mask.meta
+*.spriteatlas.meta
+*.ttf.meta
+*.otf.meta
+*.mat.meta
+*.cubemap.meta
+*.prefs.meta
+*.unityproj.meta
+*.anim.meta
+*.fbx.meta
+*.mb.meta
+*.ma.meta
+*.max.meta
+*.blend.meta
+*.dae.meta
+*.3ds.meta
+*.ase.meta
+*.obj.meta
+*.skp.meta
+*.wrl.meta
+*.ztl.meta
+*.asset.meta
+*.meta
+*.cginc.meta
+*.compute.meta
+*.shader.meta
+*.shadersubgraph.meta
+*.asmdef.meta
+*.rsp.meta
+*.raytrace.meta
+*.compute.meta
+*.shader.meta
+*.shadersubgraph.meta
+*.asmdef.meta
+*.rsp.meta
+*.raytrace.meta
+*.guiskin.meta
+*.fontsettings.meta
+*.giparams.meta
+*.npys.meta
+*.physics.meta
+*.flare.meta
+*.mask.meta
+*.spriteatlas.meta
+*.ttf.meta
+*.otf.meta
+*.mat.meta
+*.cubemap.meta
+*.prefs.meta
+*.unityproj.meta
+*.anim.meta
+*.fbx.meta
+*.mb.meta
+*.ma.meta
+*.max.meta
+*.blend.meta
+*.dae.meta
+*.3ds.meta
+*.ase.meta
+*.obj.meta
+*.skp.meta
+*.wrl.meta
+*.ztl.meta
+*.asset.meta
+*.meta
+*.cginc.meta
+*.compute.meta
+*.shader.meta
+*.shadersubgraph.meta
+*.asmdef.meta
+*.rsp.meta
+*.raytrace.meta
+*.compute.meta
+*.shader.meta
+*.shadersubgraph.meta
+*.asmdef.meta
+*.rsp.meta
+*.raytrace.meta
+*.guiskin.meta
+*.fontsettings.meta
+*.giparams.meta
+*.npys.meta
+*.physics.meta
+*.flare.meta
+*.mask.meta
+*.spriteatlas.meta
+*.ttf.meta
+*.otf.meta
+*.mat.meta
+*.cubemap.meta
+*.prefs.meta
+*.unityproj.meta
+*.anim.meta
+*.fbx.meta
+*.mb.meta
+*.ma.meta
+*.max.meta
+*.blend.meta
+*.dae.meta
+*.3ds.meta
+*.ase.meta
+*.obj.meta
+*.skp.meta
+*.wrl.meta
+*.ztl.meta
+*.asset.meta
+*.meta
+*.cginc.meta
+*.compute.meta
+*.shader.meta
+*.shadersubgraph.meta
+*.asmdef.meta
+*.rsp.meta
+*.raytrace.meta
+*.compute.meta
+*.shader.meta
+*.shadersubgraph.meta
+*.asmdef.meta
+*.rsp.meta
+*.raytrace.meta
+*.guiskin.meta
+*.fontsettings.meta
+*.giparams.meta
+*.npys.meta
+*.physics.meta
+*.flare.meta
+*.mask.meta
+*.spriteatlas.meta
+*.ttf.meta
+*.otf.meta
+*.mat.meta
+*.cubemap.meta
+*.prefs.meta
+*.unityproj.meta
+*.anim.meta
+*.fbx.meta
+*.mb.meta
+*.ma.meta
+*.max.meta
+*.blend.meta
+*.dae.meta
+*.3ds.meta
+*.ase.meta
+*.obj.meta
+*.skp.meta
+*.wrl.meta
+*.ztl.meta
+*.asset.meta
+*.meta
+*.cginc.meta
+*.compute.meta
+*.shader.meta
+*.shadersubgraph.meta
+*.asmdef.meta
+*.rsp.meta
+*.raytrace.meta
+*.compute.meta
+*.shader.meta
+*.shadersubgraph.meta
+*.asmdef.meta
+*.rsp.meta
+*.raytrace.meta
+*.guiskin.meta
+......
