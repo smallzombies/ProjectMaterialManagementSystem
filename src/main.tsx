@@ -2,7 +2,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { ConfigProvider } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
-import { BrowserRouter } from 'react-router-dom'
+// import { BrowserRouter } from 'react-router-dom'
+import {HashRouter} from 'react-router-dom'
 import './index.css'
 import App from './App'
 import { AppProvider } from './store/AppContext'
@@ -10,11 +11,13 @@ import { AppProvider } from './store/AppContext'
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ConfigProvider locale={zhCN} theme={{ token: { colorPrimary: '#1677ff' } }}>
-      <BrowserRouter>
-        <AppProvider>
-          <App />
-        </AppProvider>
-      </BrowserRouter>
+        {/*<BrowserRouter>*/}
+        <HashRouter>
+            <AppProvider>
+                <App/>
+            </AppProvider>
+            {/*</BrowserRouter>*/}
+        </HashRouter>
     </ConfigProvider>
   </StrictMode>,
 )

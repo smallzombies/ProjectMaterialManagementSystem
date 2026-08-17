@@ -53,14 +53,9 @@ function Shares() {
       render: (_, r) => shareSummary(r),
     },
     {
-      title: '访问方式',
-      dataIndex: 'accessMode',
-      render: (v: string, r) => (
-        <Space>
-          <Tag color={v === '免登录' ? 'gold' : 'blue'}>{v}</Tag>
-          <Tag color={r.downloadAllowed ? 'green' : 'default'}>{r.downloadAllowed ? '可下载' : '仅预览'}</Tag>
-        </Space>
-      ),
+      title: '允许下载',
+      dataIndex: 'downloadAllowed',
+      render: (v: boolean) => <Tag color={v ? 'green' : 'default'}>{v ? '可下载' : '仅预览'}</Tag>,
     },
     {
       title: '有效期',
@@ -108,7 +103,6 @@ function Shares() {
               {shareSummary(r)}
               <div style={{ marginTop: 8 }}>
                 <Space wrap size={[0, 4]}>
-                  <Tag color={r.accessMode === '免登录' ? 'gold' : 'blue'}>{r.accessMode}</Tag>
                   <Tag color={r.downloadAllowed ? 'green' : 'default'}>{r.downloadAllowed ? '可下载' : '仅预览'}</Tag>
                   <Tag color={dayjs(r.expireAt).isBefore(dayjs()) ? 'red' : 'default'}>
                     {dayjs(r.expireAt).isBefore(dayjs()) ? '已过期' : r.expireAt}

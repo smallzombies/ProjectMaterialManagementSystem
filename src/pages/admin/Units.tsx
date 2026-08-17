@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { Card, Table, Button, Space, Tag, Modal, Form, Input, message, Popconfirm } from 'antd'
+import { Card, Table, Button, Space, Tag, Modal, Form, Input, Divider, Switch, message, Popconfirm } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { PlusOutlined, EditOutlined, DeleteOutlined, StopOutlined, CheckOutlined } from '@ant-design/icons'
 import { useApp } from '../../store/AppContext'
 import { uid } from '../../mock/db'
-import type { Unit } from '../../types'
+import type { Unit, UnitConfig } from '../../types'
+
+const DEFAULT_CONFIG: UnitConfig = { showDetailMeta: true, showApproval: true, showFailed: true }
 
 function Units() {
   const { db, refresh, update } = useApp()
@@ -20,13 +22,20 @@ function Units() {
         next.units[i] = { ...editing, ...v, unitType: editing.unitType }
         message.success('单位已更新')
       } else {
-        next.units.push({ id: uid('unit'), ...v, unitType: '内部', isEnabled: true })
+        next.units.push({ id: uid('unit'), ...v, unitType: '内部', isEnabled: true, config: DEFAULT_CONFIG })
         message.success('单位已创建')
       }
       update(next)
       refresh()
       setOpen(false)
     })
+  }
+
+  const openEdit = (u: Unit) => {
+    setEditing(u)
+    form.setFieldsValue(u)
+    form.setFieldsValue({ config: u.config || DEFAULT_CONFIG })
+    setOpen(true)
   }
 
   const toggleStatus = (u: Unit) => {
@@ -71,7 +80,7 @@ function Units() {
       width: 200,
       render: (_, r) => (
         <Space>
-          <Button size="small" type="link" icon={<EditOutlined />} onClick={() => { setEditing(r); form.setFieldsValue(r); setOpen(true) }}>
+          <Button size="small" type="link" icon={<EditOutlined />} onClick={() => openEdit(r)}>
             编辑
           </Button>
           <Button size="small" type="link" icon={r.isEnabled ? <StopOutlined /> : <CheckOutlined />} onClick={() => toggleStatus(r)}>
@@ -95,11 +104,25 @@ function Units() {
       </div>
       <Table rowKey="id" columns={columns} dataSource={db.units} pagination={false} />
 
-      <Modal title={editing ? '编辑单位' : '新增单位'} open={open} onOk={submit} onCancel={() => setOpen(false)} width={520} destroyOnClose>
+      <Modal title={editing ? '编辑单位' : '新增单位'} open={open} onOk={submit} onCancel={() => setOpen(false)} width={560} destroyOnClose>
         <Form form={form} layout="vertical">
           <Form.Item name="name" label="单位名称" rules={[{ required: true, message: '请输入单位名称' }]}>
             <Input placeholder="如：某设计院" />
           </Form.Item>
+          {editing && (
+            <>
+              <Divider plain style={{ margin: '4px 0 16px' }}>参数配置</Divider>
+              <Form.Item name={['config', 'showDetailMeta']} label="文件详情" valuePropName="checked" extra="是否显示图片 EXIF 信息、上传时间和拍摄时间">
+                <Switch checkedChildren="显示" unCheckedChildren="隐藏" />
+              </Form.Item>
+              <Form.Item name={['config', 'showApproval']} label="审批记录" valuePropName="checked" extra="文件详情中是否显示审批记录">
+                <Switch checkedChildren="显示" unCheckedChildren="隐藏" />
+              </Form.Item>
+              <Form.Item name={['config', 'showFailed']} label="不合格文件" valuePropName="checked" extra="文件管理器中是否展示审批意见为「不合格」的文件">
+                <Switch checkedChildren="展示" unCheckedChildren="隐藏" />
+              </Form.Item>
+            </>
+          )}
         </Form>
       </Modal>
     </Card>

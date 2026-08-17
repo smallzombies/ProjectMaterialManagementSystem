@@ -22,6 +22,7 @@ import {
   Grid,
   TreeSelect,
   Breadcrumb,
+  Divider,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import {
@@ -41,6 +42,7 @@ import {
   EditOutlined,
   ReloadOutlined,
   LinkOutlined,
+  PlusOutlined,
 } from '@ant-design/icons'
 import { useParams } from 'react-router-dom'
 import { uid } from '../mock/db'
@@ -57,13 +59,14 @@ type ViewMode = 'grid' | 'small' | 'list'
 
 function ProjectFiles() {
   const { projectId = '' } = useParams()
-  const { db, refresh, update, currentUser, can } = useApp()
+  const { db, refresh, update, currentUser, can, unitConfig } = useApp()
   const screens = Grid.useBreakpoint()
   const isMobile = !screens.md
   const [folderId, setFolderId] = useState<string | null>(null)
   const [view, setView] = useState<ViewMode>('grid')
   const [keyword, setKeyword] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('all')
+  const [approvalFilter, setApprovalFilter] = useState<string>('all')
   const [tagFilter, setTagFilter] = useState<string[]>([])
   const [pointFilter, setPointFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState('time_desc')
@@ -79,6 +82,7 @@ function ProjectFiles() {
   const [moveForm] = Form.useForm()
   const [tagModalOpen, setTagModalOpen] = useState(false)
   const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [batchTagSearch, setBatchTagSearch] = useState('')
   const [pointModalOpen, setPointModalOpen] = useState(false)
   const [pointForm] = Form.useForm()
   const [exifConfirm, setExifConfirm] = useState(false)
@@ -131,6 +135,8 @@ function ProjectFiles() {
       list = list.filter((m) => m.name.toLowerCase().includes(keyword.toLowerCase()))
     }
     if (typeFilter !== 'all') list = list.filter((m) => m.type === typeFilter)
+    if (!unitConfig.showFailed) list = list.filter((m) => m.approval !== '不合格')
+    if (approvalFilter !== 'all') list = list.filter((m) => m.approval === approvalFilter)
     if (pointFilter !== 'all') list = list.filter((m) => m.pointId === pointFilter)
     if (tagFilter.length) {
       list = list.filter((m) => tagFilter.every((t) => m.tags.includes(t)))
@@ -150,7 +156,7 @@ function ProjectFiles() {
         break
     }
     return list
-  }, [db, projectId, folderId, keyword, typeFilter, pointFilter, tagFilter, sortBy])
+  }, [db, projectId, folderId, keyword, typeFilter, approvalFilter, pointFilter, tagFilter, sortBy, unitConfig])
 
   // 子文件夹
   const childFolders = useMemo(() => {
@@ -192,6 +198,21 @@ function ProjectFiles() {
       .filter((t) => t.parentId === pid)
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((t) => ({ value: t.id, title: t.name, children: tagTree(t.id) }))
+
+  const flatTagOptions = useMemo(() => {
+    const opts: { id: string; name: string; path: string }[] = []
+    const walk = (pid: string | null, prefix: string) => {
+      db.tags
+        .filter((t) => t.parentId === pid)
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .forEach((t) => {
+          opts.push({ id: t.id, name: t.name, path: prefix ? `${prefix} / ${t.name}` : t.name })
+          walk(t.id, prefix ? `${prefix} / ${t.name}` : t.name)
+        })
+    }
+    walk(null, '')
+    return opts
+  }, [db.tags])
 
   const onSelectTree = (keys: React.Key[]) => {
     const k = keys[0] as string
@@ -377,6 +398,34 @@ function ProjectFiles() {
     message.success('标签已添加')
   }
 
+  const createBatchTag = () => {
+    const name = batchTagSearch.trim()
+    if (!name) {
+      message.warning('请先输入标签名称')
+      return
+    }
+    const existing = db.tags.find((t) => t.name === name)
+    if (existing) {
+      setSelectedTags((s) => (s.includes(existing.id) ? s : [...s, existing.id]))
+      setBatchTagSearch('')
+      message.success('已添加现有标签')
+      return
+    }
+    const next = { ...db }
+    let uncat = next.tags.find((t) => t.name === '未分类' && t.parentId === null)
+    if (!uncat) {
+      uncat = { id: uid('t'), parentId: null, name: '未分类' }
+      next.tags.push(uncat)
+    }
+    const newTag = { id: uid('t'), parentId: uncat.id, name }
+    next.tags.push(newTag)
+    update(next)
+    refresh()
+    setSelectedTags((s) => [...s, newTag.id])
+    setBatchTagSearch('')
+    message.success(`已创建标签“${name}”并归入“未分类”`)
+  }
+
   const doPoint = () => {
     pointForm.validateFields().then((v) => {
       const next = { ...db }
@@ -387,7 +436,7 @@ function ProjectFiles() {
       refresh()
       setPointModalOpen(false)
       setSelected([])
-      message.success('点位已批量绑定')
+      message.success('船舱已批量绑定')
     })
   }
 
@@ -468,6 +517,7 @@ function ProjectFiles() {
             <div>
               <Tag style={{ marginRight: 4 }} color="default">{TYPE_LABEL[m.type]}</Tag>
               <span className="muted">{fmtSize(m.size)}</span>
+              {m.approval && <Tag color={m.approval === '合格' ? 'green' : 'red'} style={{ marginLeft: 4 }}>{m.approval}</Tag>}
             </div>
           }
         />
@@ -486,7 +536,8 @@ function ProjectFiles() {
     { title: '大小', dataIndex: 'size', width: 100, render: (s: number) => fmtSize(s) },
     { title: '上传人', dataIndex: 'uploaderId', width: 100, render: (v: string) => db.users.find((u) => u.id === v)?.name || '-' },
     { title: '上传时间', dataIndex: 'uploadTime', width: 140, render: (v: string) => fmtDate(v) },
-    { title: '点位', dataIndex: 'pointId', width: 120, render: (v?: string) => points.find((p) => p.id === v)?.name || '-' },
+    { title: '船舱', dataIndex: 'pointId', width: 120, render: (v?: string) => points.find((p) => p.id === v)?.name || '-' },
+    { title: '审批意见', dataIndex: 'approval', width: 100, render: (v?: string) => v ? <Tag color={v === '合格' ? 'green' : 'red'}>{v}</Tag> : <span className="muted">-</span> },
     { title: '标签', dataIndex: 'tags', render: (t: string[]) => (t.length ? t.map((x) => <Tag key={x} color="blue" style={{ margin: 1 }}>{db.tags.find((q) => q.id === x)?.name || x}</Tag>) : '-') },
     {
       title: '操作',
@@ -602,10 +653,20 @@ function ProjectFiles() {
               options={[{ value: 'all', label: '全部类型' }, ...Object.entries(TYPE_LABEL).map(([v, l]) => ({ value: v, label: l }))]}
             />
             <Select
+              value={approvalFilter}
+              style={{ width: isMobile ? 120 : 120 }}
+              onChange={setApprovalFilter}
+              options={[
+                { value: 'all', label: '审批全部' },
+                { value: '合格', label: '合格' },
+                ...(unitConfig.showFailed ? [{ value: '不合格', label: '不合格' }] : []),
+              ]}
+            />
+            <Select
               value={pointFilter}
               style={{ width: isMobile ? 150 : 160 }}
               onChange={setPointFilter}
-              options={[{ value: 'all', label: '全部点位' }, ...points.map((p) => ({ value: p.id, label: p.name }))]}
+              options={[{ value: 'all', label: '全部船舱' }, ...points.map((p) => ({ value: p.id, label: p.name }))]}
             />
             <TreeSelect
               treeCheckable
@@ -735,7 +796,7 @@ function ProjectFiles() {
             )}
             {canEdit && (
               <Button size="small" icon={<AimOutlined />} onClick={() => setPointModalOpen(true)}>
-                点位
+                船舱
               </Button>
             )}
             {canEdit && (
@@ -810,26 +871,35 @@ function ProjectFiles() {
       </Modal>
 
       <Modal title="批量打标签" open={tagModalOpen} onOk={doTag} onCancel={() => setTagModalOpen(false)} destroyOnClose>
-        <TreeSelect
+        <Select
+          mode="multiple"
           style={{ width: '100%' }}
-          placeholder="选择标签"
-          treeDefaultExpandAll
+          placeholder="搜索选择 / 创建标签"
           value={selectedTags}
           onChange={setSelectedTags}
-          treeData={tagTree(null)}
-          treeCheckable
-          showCheckedStrategy={TreeSelect.SHOW_PARENT}
+          onSearch={setBatchTagSearch}
+          optionFilterProp="label"
+          options={flatTagOptions.map((t) => ({ value: t.id, label: t.path }))}
+          dropdownRender={(menu) => (
+            <div style={{ minWidth: 180 }}>
+              {menu}
+              <Divider style={{ margin: '4px 0' }} />
+              <Button size="small" block type="link" icon={<PlusOutlined />} onClick={createBatchTag}>
+                新建标签“{batchTagSearch || '未输入名称'}”（归入未分类）
+              </Button>
+            </div>
+          )}
         />
         <div className="muted" style={{ marginTop: 8 }}>向选中的 {selected.length} 个文件追加标签，多人打标不互斥</div>
       </Modal>
 
-      <Modal title="批量指定点位" open={pointModalOpen} onOk={doPoint} onCancel={() => setPointModalOpen(false)} destroyOnClose>
+      <Modal title="批量指定船舱" open={pointModalOpen} onOk={doPoint} onCancel={() => setPointModalOpen(false)} destroyOnClose>
         <Form form={pointForm} layout="vertical">
-          <Form.Item name="pointId" label="选择点位" rules={[{ required: true, message: '请选择点位' }]}>
-            <Select placeholder="选择点位" options={points.filter((p) => p.status === '启用').map((p) => ({ value: p.id, label: `${p.name}(${p.code})` }))} />
+          <Form.Item name="pointId" label="选择船舱" rules={[{ required: true, message: '请选择船舱' }]}>
+            <Select placeholder="选择船舱" options={points.filter((p) => p.status === '启用').map((p) => ({ value: p.id, label: `${p.name}(${p.code})` }))} />
           </Form.Item>
         </Form>
-        <div className="muted">将为选中的 {selected.length} 个文件绑定该点位</div>
+        <div className="muted">将为选中的 {selected.length} 个文件绑定该船舱</div>
       </Modal>
 
       <Modal title="批量重命名" open={renameBatchOpen} onOk={doBatchRename} onCancel={() => setRenameBatchOpen(false)} destroyOnClose>

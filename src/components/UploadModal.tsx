@@ -128,8 +128,8 @@ function UploadModal({ open, onClose, projectId, parentFolderId, folderPath }: P
                     options={foldersOfProject.map((f) => ({ value: f.id, label: f.name }))}
                   />
                 </Form.Item>
-                <Form.Item name="pointId" label="拍摄点位（可选）">
-                  <Select allowClear placeholder="选择点位" options={pointsOfProject.map((p) => ({ value: p.id, label: `${p.name}(${p.code})` }))} />
+                <Form.Item name="pointId" label="拍摄船舱（可选）">
+                  <Select allowClear placeholder="选择船舱" options={pointsOfProject.map((p) => ({ value: p.id, label: `${p.name}(${p.code})` }))} />
                 </Form.Item>
                 <Upload.Dragger
                   multiple

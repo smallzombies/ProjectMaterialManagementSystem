@@ -21,6 +21,7 @@ import {
   EditOutlined,
   DeleteOutlined,
   InboxOutlined,
+  SearchOutlined,
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../store/AppContext'
@@ -35,10 +36,11 @@ function Projects() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Project | null>(null)
   const [form] = Form.useForm()
+  const [keyword, setKeyword] = useState('')
 
-  const visibleProjects = db.projects.filter(
-    (p) => isAdmin || currentUser?.projectIds.includes(p.id),
-  )
+  const visibleProjects = db.projects
+    .filter((p) => isAdmin || currentUser?.projectIds.includes(p.id))
+    .filter((p) => !keyword || p.name.includes(keyword) || p.code.includes(keyword))
 
   const openCreate = () => {
     setEditing(null)
@@ -157,6 +159,14 @@ function Projects() {
               新建项目
             </Button>
           )}
+          <Input.Search
+            prefix={<SearchOutlined />}
+            placeholder="搜索项目名称 / 编号"
+            allowClear
+            style={{ width: isMobile ? 180 : 240 }}
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+          />
           <span className="muted">共 {visibleProjects.length} 个项目</span>
         </Space>
       </div>

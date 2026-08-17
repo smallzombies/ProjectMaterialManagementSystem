@@ -30,11 +30,18 @@ export type PermCode =
   | 'member.manage'
   | 'log.view'
 
+export interface UnitConfig {
+  showDetailMeta: boolean
+  showApproval: boolean
+  showFailed: boolean
+}
+
 export interface Unit {
   id: string
   name: string
   unitType: '内部' | '外包' | '监理'
   isEnabled: boolean
+  config?: UnitConfig
 }
 
 export interface Role {
@@ -52,6 +59,7 @@ export interface User {
   unitId?: string
   roleId: RoleId | string
   projectIds: string[]
+  pointIds?: string[]
   status: '启用' | '停用'
   password?: string
 }
@@ -83,6 +91,20 @@ export interface MaterialVersion {
   note: string
 }
 
+export interface ExifData {
+  cameraBrand?: string
+  cameraModel?: string
+  aperture?: string
+  shutter?: string
+  isoSpeed?: string
+  focalLength?: string
+  whiteBalance?: string
+  colorSpace?: string
+  gpsLat?: string
+  gpsLng?: string
+  gpsAltitude?: string
+}
+
 export interface Material {
   id: string
   projectId: string
@@ -97,9 +119,11 @@ export interface Material {
   remark?: string
   tags: string[]
   hasExif?: boolean
+  exif?: ExifData
   versions: MaterialVersion[]
   commentCount: number
   status: '正常' | '回收站'
+  approval?: '合格' | '不合格'
   deletedAt?: string
   deletedBy?: string
 }
@@ -116,6 +140,16 @@ export interface MaterialTag {
   tagId: string
   userId: string
   time: string
+}
+
+export interface Approval {
+  id: string
+  materialId: string
+  userId: string
+  result: '合格' | '不合格'
+  tagChange: '新增' | '删除' | '无变化'
+  changedNames: string[]
+  createdAt: string
 }
 
 export interface Point {

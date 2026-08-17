@@ -22,6 +22,7 @@ import {
 import { useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useApp } from '../store/AppContext'
+import Watermark from '../components/Watermark'
 
 const { Sider, Header, Content } = Layout
 
@@ -43,7 +44,7 @@ function MainLayout() {
       label: '项目信息',
       children: [
         { key: '/projects', icon: <FolderOpenOutlined />, label: '项目管理' },
-        { key: '/points', icon: <AimOutlined />, label: '点位管理' },
+        { key: '/points', icon: <AimOutlined />, label: '船舱管理' },
         { key: '/models', icon: <DatabaseOutlined />, label: '模型管理' },
       ],
     },
@@ -163,6 +164,7 @@ function MainLayout() {
           <Outlet />
         </Content>
       </Layout>
+      <Watermark />
     </Layout>
   )
 }

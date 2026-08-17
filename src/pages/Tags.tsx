@@ -93,6 +93,37 @@ function Tags() {
     message.success('标签已删除')
   }
 
+  const onDrop: React.ComponentProps<typeof Tree>['onDrop'] = (info) => {
+    const dragKey = String(info.dragNode.key)
+    const dropKey = String(info.node.key)
+    const drag = db.tags.find((t) => t.id === dragKey)
+    const target = db.tags.find((t) => t.id === dropKey)
+    if (!drag || !target) return
+
+    const newParentId = info.dropToGap ? target.parentId : dropKey
+
+    if (newParentId === drag.id) {
+      message.warning('不能将标签移动到自身内部')
+      return
+    }
+    let cur: string | null = newParentId
+    while (cur) {
+      if (cur === drag.id) {
+        message.warning('不能将标签移动到其子级下')
+        return
+      }
+      cur = db.tags.find((t) => t.id === cur)?.parentId ?? null
+    }
+    if (drag.parentId === newParentId) return
+
+    const next = { ...db }
+    const i = next.tags.findIndex((t) => t.id === drag.id)
+    next.tags[i] = { ...drag, parentId: newParentId }
+    update(next)
+    refresh()
+    message.success('标签已移动')
+  }
+
   const hasData = db.tags.length > 0
 
   return (
@@ -107,9 +138,12 @@ function Tags() {
           )}
         </Space>
       </div>
+      <div className="muted" style={{ marginBottom: 8 }}>
+        {can('material.tag') ? '可直接拖拽标签到其他分类下调整层级' : '预览模式：仅可查看标签层级'}
+      </div>
       <div style={{ maxHeight: 480, overflow: 'auto', background: '#fafafa', borderRadius: 8, padding: 12 }}>
         {hasData ? (
-          <Tree treeData={treeData(null)} defaultExpandAll />
+          <Tree treeData={treeData(null)} defaultExpandAll blockNode draggable={can('material.tag')} onDrop={onDrop} />
         ) : (
           <Empty description="暂无标签，点击右上角“创建顶级标签”" />
         )}

@@ -1,5 +1,7 @@
 import type {
+  Approval,
   Comment,
+  ExifData,
   Folder,
   LogEntry,
   Material,
@@ -26,6 +28,7 @@ export interface DB {
   materials: Material[]
   tags: Tag[]
   materialTags: MaterialTag[]
+  approvals: Approval[]
   points: Point[]
   comments: Comment[]
   shares: ShareLink[]
@@ -46,6 +49,7 @@ const emptyDB = (): DB => ({
   materials: [],
   tags: [],
   materialTags: [],
+  approvals: [],
   points: [],
   comments: [],
   shares: [],
@@ -70,16 +74,16 @@ export function seedDB(): DB {
   ]
 
   db.units = [
-    { id: 'u1', name: '本公司', unitType: '内部', isEnabled: true },
-    { id: 'u2', name: '某勘察院', unitType: '外包', isEnabled: true },
-    { id: 'u3', name: '监理单位', unitType: '监理', isEnabled: true },
+    { id: 'u1', name: '本公司', unitType: '内部', isEnabled: true, config: { showDetailMeta: true, showApproval: true, showFailed: true } },
+    { id: 'u2', name: '某勘察院', unitType: '外包', isEnabled: true, config: { showDetailMeta: true, showApproval: false, showFailed: false } },
+    { id: 'u3', name: '监理单位', unitType: '监理', isEnabled: true, config: { showDetailMeta: true, showApproval: true, showFailed: true } },
   ]
 
   db.users = [
     { id: 'u_admin', name: '系统管理员', phone: '13800000001', unitId: 'u1', roleId: 'admin', projectIds: [], status: '启用' },
     { id: 'u_wang', name: '王工', phone: '13800000002', unitId: 'u1', roleId: 'leader', projectIds: ['p1'], status: '启用' },
     { id: 'u_li', name: '李工', phone: '13800000003', unitId: 'u1', roleId: 'clerk', projectIds: ['p1', 'p2'], status: '启用' },
-    { id: 'u_zhao', name: '赵工', phone: '13800000004', unitId: 'u2', roleId: 'field', projectIds: ['p1'], status: '启用' },
+    { id: 'u_zhao', name: '赵工', phone: '13800000004', unitId: 'u2', roleId: 'field', projectIds: ['p1'], pointIds: ['pt1', 'pt2'], status: '启用' },
     { id: 'u_sun', name: '孙监理', phone: '13800000005', unitId: 'u3', roleId: 'guest', projectIds: ['p1'], status: '启用' },
   ]
 
@@ -109,6 +113,7 @@ export function seedDB(): DB {
     { id: 't7', parentId: null, name: '类型' },
     { id: 't8', parentId: 't7', name: '现场照片' },
     { id: 't9', parentId: 't7', name: '图纸' },
+    { id: 't10', parentId: null, name: '未分类' },
   ]
 
   db.points = [
@@ -117,6 +122,20 @@ export function seedDB(): DB {
     { id: 'pt3', projectId: 'p1', name: 'K1+020 挡墙', code: 'P-003', lat: 30.5210, lng: 114.3205, status: '启用' },
     { id: 'pt4', projectId: 'p2', name: '站点A出入口', code: 'S-A1', lat: 30.5601, lng: 114.3912, status: '启用' },
   ]
+
+  const mockExif = (seed: number): ExifData => ({
+    cameraBrand: 'SONY',
+    cameraModel: 'ILCE-7M4',
+    aperture: 'f/2.8',
+    shutter: '1/250s',
+    isoSpeed: 'ISO 400',
+    focalLength: '24mm',
+    whiteBalance: '自动',
+    colorSpace: 'sRGB',
+    gpsLat: `30.51${seed}1° N`,
+    gpsLng: `114.30${seed}2° E`,
+    gpsAltitude: `${32 + seed} m`,
+  })
 
   const mk = (
     id: string,
@@ -145,6 +164,7 @@ export function seedDB(): DB {
     remark,
     tags,
     hasExif,
+    exif: hasExif && type === 'image' ? mockExif(Number(id.replace(/\D/g, '')) % 9 + 1) : undefined,
     versions: [{ version: 1, storageKey: `key/${id}`, fileHash: `hash${id}`, size, createBy: 'u_zhao', createTime: d(days), note: '首次上传' }],
     commentCount: 0,
     status,
@@ -165,6 +185,17 @@ export function seedDB(): DB {
     mk('m10', 'p2', 'f6', '站点A_内景.jpg', 'image', 2.2 * 1024 * 1024, 18, ['t8'], 'pt4'),
     mk('m11', 'p2', 'f7', '岩土勘察报告.pdf', 'pdf', 12.4 * 1024 * 1024, 40, []),
     mk('m12', 'p1', 'f3', '重复测试文件.jpg', 'image', 1.2 * 1024 * 1024, 3, []),
+  ]
+  // 模拟审批意见（合格/不合格）
+  db.materials[0] = { ...db.materials[0], approval: '合格' }
+  db.materials[1] = { ...db.materials[1], approval: '不合格' }
+  db.materials[2] = { ...db.materials[2], approval: '合格' }
+  db.materials[8] = { ...db.materials[8], approval: '不合格' }
+
+  db.approvals = [
+    { id: 'a1', materialId: 'm1', userId: 'u_wang', result: '合格', tagChange: '新增', changedNames: ['施工阶段', '桩基', '现场照片'], createdAt: d(18) },
+    { id: 'a2', materialId: 'm2', userId: 'u_wang', result: '不合格', tagChange: '无变化', changedNames: [], createdAt: d(17) },
+    { id: 'a3', materialId: 'm1', userId: 'u_sun', result: '合格', tagChange: '无变化', changedNames: [], createdAt: d(1) },
   ]
   // 制造一对重复文件(模拟指纹相同)
   db.materials[11] = { ...db.materials[11], versions: [...db.materials[11].versions, { version: 2, storageKey: 'key/m12v2', fileHash: 'hashdup', size: 1.2 * 1024 * 1024, createBy: 'u_li', createTime: d(1), note: '重复上传副本' }] }
@@ -210,6 +241,11 @@ function load(): DB {
       if (db.shares) {
         db.shares = db.shares.map((s) => ({ ...s, folderIds: s.folderIds ?? [] }))
       }
+      if (!db.approvals) db.approvals = []
+      db.units = (db.units || []).map((u) => ({
+        ...u,
+        config: u.config || { showDetailMeta: true, showApproval: true, showFailed: true },
+      }))
       return db
     }
   } catch { /* ignore */ }

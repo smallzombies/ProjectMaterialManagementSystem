@@ -79,7 +79,7 @@ function ShareCreateModal({ open, onClose, projectId, presetFolders, presetMater
         projectId,
         password: v.password || undefined,
         expireAt: expire,
-        accessMode: v.accessMode,
+        accessMode: '需登录',
         downloadAllowed: !!v.downloadAllowed,
         createBy: currentUser?.id || '',
         createTime: new Date().toISOString().slice(0, 19),
@@ -94,7 +94,7 @@ function ShareCreateModal({ open, onClose, projectId, presetFolders, presetMater
   }
 
   const onOpen = () => {
-    form.setFieldsValue({ accessMode: '免登录', downloadAllowed: false, expireAt: dayjs().add(7, 'day') })
+    form.setFieldsValue({ downloadAllowed: false, expireAt: dayjs().add(7, 'day') })
   }
 
   return (
@@ -145,14 +145,6 @@ function ShareCreateModal({ open, onClose, projectId, presetFolders, presetMater
             options={db.materials
               .filter((m) => m.projectId === projectId && m.status === '正常')
               .map((m) => ({ value: m.id, label: m.name }))}
-          />
-        </Form.Item>
-        <Form.Item name="accessMode" label="访问方式" extra="免登录：点开链接直接查看，无需注册账号">
-          <Select
-            options={[
-              { value: '免登录', label: '免登录（发链接直开）' },
-              { value: '需登录', label: '需登录（验证账号）' },
-            ]}
           />
         </Form.Item>
         <Form.Item name="downloadAllowed" label="允许下载" valuePropName="checked">

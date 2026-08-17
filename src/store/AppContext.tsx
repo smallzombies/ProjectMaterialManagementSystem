@@ -2,11 +2,12 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { DB } from '../mock/db'
 import { getDB, setDB, resetDB } from '../mock/db'
-import type { User, PermCode } from '../types'
+import type { User, UnitConfig, PermCode } from '../types'
 
 interface AppCtx {
   db: DB
   currentUser: User | null
+  loginTime: string | null
   refresh: () => void
   update: (next: DB) => void
   login: (userId: string) => void
@@ -15,12 +16,16 @@ interface AppCtx {
   can: (perm: PermCode) => boolean
   canScope: (perm: PermCode) => 'all' | 'project' | false
   isAdmin: boolean
+  unitConfig: UnitConfig
 }
 
 const Ctx = createContext<AppCtx | null>(null)
 
+const TIME_KEY = 'material_mgr_login_time'
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [db, setDb] = useState<DB>(() => getDB())
+  const [loginTime, setLoginTime] = useState<string | null>(() => localStorage.getItem(TIME_KEY))
 
   const refresh = () => setDb(getDB())
 
@@ -43,12 +48,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const next = { ...db, currentUserId: userId }
     setDB(next)
     setDb(next)
+    const ts = new Date().toISOString()
+    localStorage.setItem(TIME_KEY, ts)
+    setLoginTime(ts)
   }
 
   const logout = () => {
     const next = { ...db, currentUserId: '' }
     setDB(next)
     setDb(next)
+    localStorage.removeItem(TIME_KEY)
+    setLoginTime(null)
   }
 
   const reset = () => {
@@ -66,6 +76,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const isAdmin = currentUser?.roleId === 'admin'
 
+  const unitConfig = useMemo<UnitConfig>(() => {
+    const unit = db.units.find((u) => u.id === currentUser?.unitId)
+    return unit?.config || { showDetailMeta: true, showApproval: true, showFailed: true }
+  }, [db, currentUser])
+
   useEffect(() => {
     const onStorage = () => setDb(getDB())
     window.addEventListener('storage', onStorage)
@@ -73,8 +88,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo(
-    () => ({ db, currentUser, refresh, update, login, logout, reset, can, canScope, isAdmin }),
-    [db, currentUser, role],
+    () => ({ db, currentUser, loginTime, refresh, update, login, logout, reset, can, canScope, isAdmin, unitConfig }),
+    [db, currentUser, role, loginTime, unitConfig],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

@@ -13,7 +13,7 @@ import {
   Popconfirm,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { PlusOutlined, EditOutlined, DeleteOutlined, StopOutlined, CheckOutlined, SearchOutlined } from '@ant-design/icons'
+import { PlusOutlined, EditOutlined, DeleteOutlined, StopOutlined, CheckOutlined, SearchOutlined, AimOutlined } from '@ant-design/icons'
 import { useApp } from '../../store/AppContext'
 import { uid } from '../../mock/db'
 import type { User } from '../../types'
@@ -24,6 +24,13 @@ function Users() {
   const [editing, setEditing] = useState<User | null>(null)
   const [form] = Form.useForm()
   const [keyword, setKeyword] = useState('')
+  const watchedProjectIds: string[] = Form.useWatch('projectIds', form) || []
+
+  const pointOptions = db.points.filter(
+    (p) =>
+      p.status === '启用' &&
+      (watchedProjectIds.length ? watchedProjectIds.includes(p.projectId) : true),
+  )
 
   const filtered = db.users.filter(
     (u) =>
@@ -99,6 +106,22 @@ function Users() {
         ) : (
           <span className="muted">全部</span>
         ),
+    },
+    {
+      title: '指定船舱',
+      dataIndex: 'pointIds',
+      render: (v: string[]) => {
+        const names = (v || []).map((p) => db.points.find((x) => x.id === p)?.name).filter(Boolean)
+        return names.length ? (
+          <Space wrap size={0}>
+            {names.map((n) => (
+              <Tag key={n} icon={<AimOutlined />} color="orange" style={{ margin: 0 }}>{n}</Tag>
+            ))}
+          </Space>
+        ) : (
+          <span className="muted">全部船舱</span>
+        )
+      },
     },
     {
       title: '状态',
@@ -182,7 +205,32 @@ function Users() {
             <Input.Password placeholder="留空则使用默认密码 123456" />
           </Form.Item>
           <Form.Item name="projectIds" label="所属项目（留空=全部授权项目）">
-            <Select mode="multiple" allowClear style={{ width: '100%' }} options={db.projects.map((p) => ({ value: p.id, label: p.name }))} />
+            <Select
+              mode="multiple"
+              allowClear
+              style={{ width: '100%' }}
+              options={db.projects.map((p) => ({ value: p.id, label: p.name }))}
+              onChange={(next) => {
+                const cur: string[] = form.getFieldValue('pointIds') || []
+                const valid = db.points.filter((p) => next.length ? next.includes(p.projectId) : true).map((p) => p.id)
+                form.setFieldValue('pointIds', cur.filter((id) => valid.includes(id)))
+              }}
+            />
+          </Form.Item>
+          <Form.Item
+            name="pointIds"
+            label="指定船舱（留空=该项目全部船舱）"
+            extra={watchedProjectIds.length ? '仅展示所选项目下的船舱' : '未选项目，展示全部船舱'}
+          >
+            <Select
+              mode="multiple"
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              style={{ width: '100%' }}
+              placeholder="选择船舱"
+              options={pointOptions.map((p) => ({ value: p.id, label: `${p.name}（${p.code}）` }))}
+            />
           </Form.Item>
         </Form>
       </Modal>
