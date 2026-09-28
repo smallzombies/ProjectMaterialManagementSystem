@@ -268,5 +268,6 @@ export function setDB(db: DB) {
   save(db)
 }
 export function resetDB() {
-  localStorage.removeItem(KEY)
+  const empty = emptyDB()
+  save(empty)
 }

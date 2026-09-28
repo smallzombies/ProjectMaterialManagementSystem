@@ -4,16 +4,13 @@ import {
   FolderOpenOutlined,
   TagsOutlined,
   AimOutlined,
-  LinkOutlined,
   DeleteOutlined,
-  FileSearchOutlined,
+  LinkOutlined,
   FileTextOutlined,
   UserOutlined,
   TeamOutlined,
   SafetyOutlined,
-  SendOutlined,
   LogoutOutlined,
-  DatabaseOutlined,
   ProjectOutlined,
   ToolOutlined,
   MenuOutlined,
@@ -36,6 +33,7 @@ function MainLayout() {
 
   const role = db.roles.find((r) => r.id === currentUser?.roleId)
 
+  // 后端尚未实现的功能暂时从菜单隐藏
   const menuItems = [
     { key: '/home', icon: <HomeOutlined />, label: '首页' },
     {
@@ -45,7 +43,6 @@ function MainLayout() {
       children: [
         { key: '/projects', icon: <FolderOpenOutlined />, label: '项目管理' },
         { key: '/points', icon: <AimOutlined />, label: '船舱管理' },
-        { key: '/models', icon: <DatabaseOutlined />, label: '模型管理' },
       ],
     },
     {
@@ -54,7 +51,6 @@ function MainLayout() {
       label: '文件处理',
       children: [
         { key: '/recycle', icon: <DeleteOutlined />, label: '回收站' },
-        { key: '/duplicates', icon: <FileSearchOutlined />, label: '重复文件' },
         { key: '/shares', icon: <LinkOutlined />, label: '外链分享' },
       ],
     },
@@ -70,7 +66,6 @@ function MainLayout() {
               { key: '/admin/units', icon: <BankOutlined />, label: '单位管理' },
               { key: '/admin/users', icon: <UserOutlined />, label: '用户管理' },
               { key: '/admin/roles', icon: <SafetyOutlined />, label: '角色权限' },
-              { key: '/admin/transfer', icon: <SendOutlined />, label: '离职转交' },
             ]
           : []),
       ],
@@ -96,7 +91,7 @@ function MainLayout() {
     <Layout className="layout-shell">
       {isMobile ? (
         <Drawer
-          title={<span style={{ color: '#1677ff', fontWeight: 600 }}>项目素材管理系统</span>}
+          title={<span style={{ color: '#1677ff', fontWeight: 600 }}>船舶健康管理平台</span>}
           placement="left"
           width={220}
           open={drawerOpen}
@@ -114,7 +109,7 @@ function MainLayout() {
       ) : (
         <Sider width={220} theme="dark">
           <div className="app-logo">
-            <span>项目素材管理系统</span>
+            <span>船舶健康管理平台</span>
           </div>
           <Menu
             theme="dark"
@@ -141,7 +136,7 @@ function MainLayout() {
               <Button type="text" icon={<MenuOutlined />} onClick={() => setDrawerOpen(true)} />
             )}
             <div style={{ fontSize: 15, fontWeight: 500 }}>
-              {allLabelMap.get(selectedKey) || '项目素材管理系统'}
+              {allLabelMap.get(selectedKey) || '船舶健康管理平台'}
             </div>
           </Space>
           <Dropdown

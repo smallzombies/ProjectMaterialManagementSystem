@@ -82,7 +82,7 @@ function ShareCreateModal({ open, onClose, projectId, presetFolders, presetMater
         accessMode: '需登录',
         downloadAllowed: !!v.downloadAllowed,
         createBy: currentUser?.id || '',
-        createTime: new Date().toISOString().slice(0, 19),
+        createTime: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 19).replace('T', ' '),
         status: '有效',
         url: `https://mat.example/share/${uid('s')}`,
       })

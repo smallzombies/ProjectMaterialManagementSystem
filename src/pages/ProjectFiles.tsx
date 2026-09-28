@@ -1,7 +1,6 @@
-﻿import { useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Layout,
-  Tree,
   Button,
   Input,
   Select,
@@ -47,6 +46,7 @@ import {
 import { useParams } from 'react-router-dom'
 import { uid } from '../mock/db'
 import { useApp } from '../store/AppContext'
+import { materialsApi, foldersApi, logsApi, trashApi, tagsApi, downloadApi } from '../api/services'
 import { fmtSize, fmtDate, fileIcon, thumbUrl, TYPE_LABEL } from '../utils/format'
 import type { Material } from '../types'
 import FilePreview from '../components/FilePreview'
@@ -59,7 +59,7 @@ type ViewMode = 'grid' | 'small' | 'list'
 
 function ProjectFiles() {
   const { projectId = '' } = useParams()
-  const { db, refresh, update, currentUser, can, unitConfig } = useApp()
+  const { db, refresh, update, currentUser, can, unitConfig, loadProjectData } = useApp()
   const screens = Grid.useBreakpoint()
   const isMobile = !screens.md
   const [folderId, setFolderId] = useState<string | null>(null)
@@ -69,6 +69,7 @@ function ProjectFiles() {
   const [approvalFilter, setApprovalFilter] = useState<string>('all')
   const [tagFilter, setTagFilter] = useState<string[]>([])
   const [pointFilter, setPointFilter] = useState<string>('all')
+  const [pointKeyword, setPointKeyword] = useState('')
   const [sortBy, setSortBy] = useState('time_desc')
   const [selected, setSelected] = useState<string[]>([])
   const [selectedFolders, setSelectedFolders] = useState<string[]>([])
@@ -89,6 +90,22 @@ function ProjectFiles() {
   const [renameBatchOpen, setRenameBatchOpen] = useState(false)
   const [renameBatchForm] = Form.useForm()
   const [shareOpen, setShareOpen] = useState(false)
+  const [marquee, setMarquee] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null)
+  const gridRef = useRef<HTMLDivElement>(null)
+  const dragStartRef = useRef<{ x: number; y: number } | null>(null)
+  const marqueeActiveRef = useRef(false)
+  const marqueeRef = useRef<{ x1: number; y1: number; x2: number; y2: number } | null>(null)
+  const suppressClickRef = useRef(false)
+  const longPressTimer = useRef<number | undefined>(undefined)
+
+  const setMarqueeBoth = (box: { x1: number; y1: number; x2: number; y2: number } | null) => {
+    marqueeRef.current = box
+    setMarquee(box)
+  }
+
+  useEffect(() => {
+    if (projectId) loadProjectData(projectId)
+  }, [projectId])
 
   const project = db.projects.find((p) => p.id === projectId)
   const folders = db.folders.filter((f) => f.projectId === projectId)
@@ -128,8 +145,8 @@ function ProjectFiles() {
       (m) => m.projectId === projectId && (folderId ? m.folderId === folderId : true) && m.status === '正常',
     )
     if (!folderId) {
-      // 根目录显示未归档 + 顶层文件夹
-      list = db.materials.filter((m) => m.projectId === projectId && m.status === '正常')
+      // 根目录只显示未归档的素材
+      list = db.materials.filter((m) => m.projectId === projectId && m.status === '正常' && !m.folderId)
     }
     if (keyword) {
       list = list.filter((m) => m.name.toLowerCase().includes(keyword.toLowerCase()))
@@ -164,19 +181,6 @@ function ProjectFiles() {
     list = [...list].sort((a, b) => a.name.localeCompare(b.name))
     return list
   }, [folders, folderId])
-
-  const treeData = useMemo(() => {
-    const build = (pid: string | null): any[] =>
-      folders
-        .filter((f) => f.parentId === pid)
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((f) => ({
-          key: f.id,
-          title: f.name,
-          children: build(f.id),
-        }))
-    return [{ key: 'root', title: project?.name || '项目', isRoot: true, children: build(null) }]
-  }, [folders, project])
 
   const folderOptions = useMemo(() => {
     const opts: { value: string; label: React.ReactNode }[] = [{ value: '', label: project?.name || '项目根目录' }]
@@ -214,13 +218,6 @@ function ProjectFiles() {
     return opts
   }, [db.tags])
 
-  const onSelectTree = (keys: React.Key[]) => {
-    const k = keys[0] as string
-    setFolderId(k === 'root' ? null : k)
-    setSelected([])
-    setSelectedFolders([])
-  }
-
   const toggleSelect = (id: string) => {
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
   }
@@ -257,148 +254,131 @@ function ProjectFiles() {
   const canFolder = can('folder.manage')
 
   // ---- 操作实现 ----
-  const createFolder = () => {
-    newFolderForm.validateFields().then((v) => {
-      const next = { ...db }
-      next.folders.push({ id: uid('f'), projectId, parentId: folderId, name: v.name, remark: v.remark })
-      update(next)
-      refresh()
+  const createFolder = async () => {
+    try {
+      const v = await newFolderForm.validateFields()
+      await foldersApi.create({ projectId, parentId: folderId, name: v.name, remark: v.remark })
+      await loadProjectData(projectId)
       message.success('文件夹已创建')
       setNewFolderOpen(false)
-    })
+    } catch { /* validation error */ }
   }
 
-  const doRename = () => {
+  const doRename = async () => {
     if (!renameTarget) return
-    renameForm.validateFields().then((v) => {
-      const next = { ...db }
+    try {
+      const v = await renameForm.validateFields()
       if (renameTarget.kind === 'folder') {
-        const i = next.folders.findIndex((f) => f.id === renameTarget.id)
-        next.folders[i] = { ...next.folders[i], name: v.name }
+        await foldersApi.update(renameTarget.id, { name: v.name })
       } else {
-        const i = next.materials.findIndex((m) => m.id === renameTarget.id)
-        next.materials[i] = { ...next.materials[i], name: v.name }
+        await materialsApi.rename(renameTarget.id, v.name)
       }
-      update(next)
-      refresh()
+      await loadProjectData(projectId)
       message.success('重命名成功')
       setRenameTarget(null)
-    })
+    } catch { /* ignore */ }
   }
 
-  const doDelete = (ids: string[] = selected) => {
-    const next = { ...db }
-    const now = new Date().toISOString().slice(0, 19)
-    next.materials = next.materials.map((m) =>
-      ids.includes(m.id) ? { ...m, status: '回收站', deletedAt: now, deletedBy: currentUser?.id } : m,
-    )
-    for (const id of ids) {
-      const m = next.materials.find((x) => x.id === id)
-      next.logs.unshift({
-        id: uid('l'),
-        materialId: id,
-        materialName: m?.name,
+  const doDelete = async (ids: string[] = selected) => {
+    try {
+      // 收集选中文件夹内的所有素材
+      const folderMaterialIds: string[] = []
+      const walkFolders = (pid: string) => {
+        folders.filter((f) => f.parentId === pid).forEach((f) => {
+          db.materials.forEach((m) => {
+            if (m.folderId === f.id && m.status === '正常') folderMaterialIds.push(m.id)
+          })
+          walkFolders(f.id)
+        })
+      }
+      selectedFolders.forEach((fid) => {
+        db.materials.forEach((m) => {
+          if (m.folderId === fid && m.status === '正常') folderMaterialIds.push(m.id)
+        })
+        walkFolders(fid)
+      })
+      const allIds = [...new Set([...ids, ...folderMaterialIds])]
+      // 移入后端回收站
+      await Promise.all(
+        allIds.map((id) => {
+          const m = db.materials.find((x) => x.id === id)
+          return m ? trashApi.create(m) : Promise.resolve()
+        }),
+      )
+      // 删除选中的文件夹
+      for (const fid of selectedFolders) {
+        await foldersApi.remove(fid)
+      }
+      await logsApi.create({
         projectId,
         userId: currentUser?.id || '',
         actionType: '删除',
-        detail: `删除至回收站（${ids.length} 个）`,
+        detail: `删除至回收站（${allIds.length} 个文件，${selectedFolders.length} 个文件夹）`,
         ip: '10.0.0.88',
-        createdAt: now,
       })
+      await loadProjectData(projectId)
+      setSelected([])
+      setSelectedFolders([])
+      message.success('已删除至回收站')
+    } catch (e: any) {
+      message.error(e?.message || '删除失败')
     }
-    update(next)
-    refresh()
-    setSelected([])
-    message.success('已删除至回收站')
   }
 
-  const doExif = () => {
-    const next = { ...db }
-    const now = new Date().toISOString().slice(0, 19)
-    next.materials = next.materials.map((m) =>
-      selected.includes(m.id) ? { ...m, hasExif: false } : m,
-    )
-    next.logs.unshift({
-      id: uid('l'),
-      projectId,
-      userId: currentUser?.id || '',
-      actionType: 'EXIF清除',
-      detail: `批量清除 ${selected.length} 个照片的 EXIF（保留拍摄时间）`,
-      ip: '10.0.0.88',
-      createdAt: now,
-    })
-    update(next)
-    refresh()
-    message.success('EXIF 已批量清除')
+  const doClearExif = async () => {
+    try {
+      await materialsApi.batchClearExif(selected)
+      await loadProjectData(projectId)
+      message.success('EXIF 已批量清除')
+    } catch { /* ignore */ }
   }
 
-  const doMove = () => {
-    moveForm.validateFields().then((v) => {
+  const doMove = async () => {
+    try {
+      const v = await moveForm.validateFields()
       const mode = v.mode === 'copy' ? '复制' : '移动'
-      const next = { ...db }
-      const now = new Date().toISOString().slice(0, 19)
       if (v.mode === 'copy') {
         for (const id of selected) {
           const src = db.materials.find((m) => m.id === id)
-          if (!src) continue
-          next.materials.push({
-            ...src,
-            id: uid('m'),
-            folderId: v.targetFolder ?? null,
-            versions: [...src.versions],
-            tags: [...src.tags],
-          })
+          if (src) {
+            await materialsApi.create({ ...src, id: undefined, folderId: v.targetFolder ?? null })
+          }
         }
       } else {
-        next.materials = next.materials.map((m) =>
-          selected.includes(m.id) ? { ...m, folderId: v.targetFolder ?? null, tags: [...m.tags] } : m,
-        )
+        await materialsApi.batchMove(selected, v.targetFolder ?? null)
       }
-      next.logs.unshift({
-        id: uid('l'),
+      await logsApi.create({
         projectId,
         userId: currentUser?.id || '',
         actionType: mode,
         detail: `${mode} ${selected.length} 个文件 → ${v.targetFolder ? folders.find((f) => f.id === v.targetFolder)?.name : '根目录'}`,
         ip: '10.0.0.88',
-        createdAt: now,
       })
-      update(next)
-      refresh()
+      await loadProjectData(projectId)
       setSelected([])
       setMoveOpen(false)
       message.success(`已${mode} ${selected.length} 个文件`)
-    })
+    } catch { /* ignore */ }
   }
 
-  const doTag = () => {
-    const next = { ...db }
-    const now = new Date().toISOString().slice(0, 19)
-    next.materials = next.materials.map((m) =>
-      selected.includes(m.id) ? { ...m, tags: [...new Set([...m.tags, ...selectedTags])] } : m,
-    )
-    for (const t of selectedTags) {
-      for (const id of selected) {
-        next.materialTags.push({ materialId: id, tagId: t, userId: currentUser?.id || '', time: now })
-      }
-    }
-    next.logs.unshift({
-      id: uid('l'),
-      projectId,
-      userId: currentUser?.id || '',
-      actionType: '打标签',
-      detail: `批量打标 ${selected.length} 个文件`,
-      ip: '10.0.0.88',
-      createdAt: now,
-    })
-    update(next)
-    refresh()
-    setTagModalOpen(false)
-    setSelectedTags([])
-    message.success('标签已添加')
+  const doTag = async () => {
+    try {
+      await materialsApi.batchTag(selected, selectedTags)
+      await logsApi.create({
+        projectId,
+        userId: currentUser?.id || '',
+        actionType: '打标签',
+        detail: `批量为 ${selected.length} 个文件添加标签`,
+        ip: '10.0.0.88',
+      })
+      await loadProjectData(projectId)
+      setSelectedTags([])
+      setTagModalOpen(false)
+      message.success('标签已添加')
+    } catch { /* ignore */ }
   }
 
-  const createBatchTag = () => {
+    const createBatchTag = async () => {
     const name = batchTagSearch.trim()
     if (!name) {
       message.warning('请先输入标签名称')
@@ -411,44 +391,36 @@ function ProjectFiles() {
       message.success('已添加现有标签')
       return
     }
-    const next = { ...db }
-    let uncat = next.tags.find((t) => t.name === '未分类' && t.parentId === null)
-    if (!uncat) {
-      uncat = { id: uid('t'), parentId: null, name: '未分类' }
-      next.tags.push(uncat)
+    try {
+      const newTag = await tagsApi.create({ name, parentId: null })
+      await loadProjectData(projectId)
+      setSelectedTags((s) => [...s, newTag.id])
+      setBatchTagSearch('')
+      message.success(`已创建标签"${name}"并归入"未分类"`)
+    } catch {
+      message.error('标签创建失败')
     }
-    const newTag = { id: uid('t'), parentId: uncat.id, name }
-    next.tags.push(newTag)
-    update(next)
-    refresh()
-    setSelectedTags((s) => [...s, newTag.id])
-    setBatchTagSearch('')
-    message.success(`已创建标签“${name}”并归入“未分类”`)
   }
 
-  const doPoint = () => {
-    pointForm.validateFields().then((v) => {
-      const next = { ...db }
-      next.materials = next.materials.map((m) =>
-        selected.includes(m.id) ? { ...m, pointId: v.pointId } : m,
-      )
-      update(next)
-      refresh()
+  const doPoint = async () => {
+    try {
+      const v = await pointForm.validateFields()
+      await materialsApi.batchPoint(selected, v.pointId)
+      await loadProjectData(projectId)
       setPointModalOpen(false)
-      setSelected([])
-      message.success('船舱已批量绑定')
-    })
+      message.success('船舱已设置')
+    } catch { /* ignore */ }
   }
 
-  const doBatchRename = () => {
-    renameBatchForm.validateFields().then((v) => {
+  const doBatchRename = async () => {
+    try {
+      const v = await renameBatchForm.validateFields()
       const template = (v.template || 'batch') as string
       const customText = (v.customText || '') as string
-      const next = { ...db }
+      const renames: { id: string; name: string }[] = []
       selected.forEach((id, i) => {
-        const idx = next.materials.findIndex((m) => m.id === id)
-        if (idx < 0) return
-        const m = next.materials[idx]
+        const m = db.materials.find((x) => x.id === id)
+        if (!m) return
         const seq = String(i + 1).padStart(3, '0')
         const base =
           template === 'num'
@@ -460,18 +432,106 @@ function ProjectFiles() {
         const parts = [base]
         if (v.includeUploader) parts.push(currentUser?.name || '')
         if (customText) parts.push(customText)
-        next.materials[idx] = { ...m, name: parts.join('_') + ext }
+        renames.push({ id, name: parts.join('_') + ext })
       })
-      update(next)
-      refresh()
+      for (const r of renames) {
+        await materialsApi.rename(r.id, r.name)
+      }
+      await loadProjectData(projectId)
       setRenameBatchOpen(false)
       setSelected([])
       message.success('批量重命名完成')
-    })
+    } catch { /* ignore */ }
   }
 
-  const download = (ids: string[]) => {
-    message.success(`开始打包下载 ${ids.length} 个文件（保持文件夹层级）`)
+  const download = async (ids: string[]) => {
+    if (!ids.length) { message.warning('请先选择文件'); return }
+    try {
+      await downloadApi.zip(ids)
+      message.success('下载完成')
+    } catch {
+      message.error('下载失败')
+    }
+  }
+
+  const relCoords = (e: { clientX: number; clientY: number }) => {
+    const rect = gridRef.current?.getBoundingClientRect()
+    if (!rect) return { x: e.clientX, y: e.clientY }
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+  }
+
+  const onGridMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return
+    const target = e.target as HTMLElement
+    if (target.closest('.ant-checkbox-wrapper, button, a, input, .ant-select, .ant-input, .ant-dropdown, .ant-popconfirm, .ant-pagination')) return
+    // 阻止浏览器原生文本选择
+    e.preventDefault()
+    const start = relCoords(e)
+    dragStartRef.current = start
+    marqueeActiveRef.current = false
+    suppressClickRef.current = false
+    setMarqueeBoth(null)
+    window.clearTimeout(longPressTimer.current)
+    longPressTimer.current = window.setTimeout(() => {
+      if (dragStartRef.current) {
+        marqueeActiveRef.current = true
+        setMarqueeBoth({ x1: start.x, y1: start.y, x2: start.x, y2: start.y })
+      }
+    }, 180)
+
+    const move = (ev: MouseEvent) => {
+      const s = dragStartRef.current
+      if (!s) return
+      const rect = gridRef.current?.getBoundingClientRect()
+      const cx = ev.clientX - (rect?.left || 0)
+      const cy = ev.clientY - (rect?.top || 0)
+      const dx = cx - s.x
+      const dy = cy - s.y
+      if (!marqueeActiveRef.current) {
+        if (Math.abs(dx) + Math.abs(dy) < 5) return
+        window.clearTimeout(longPressTimer.current)
+        marqueeActiveRef.current = true
+      }
+      setMarqueeBoth({ x1: Math.min(s.x, cx), y1: Math.min(s.y, cy), x2: Math.max(s.x, cx), y2: Math.max(s.y, cy) })
+    }
+
+    const up = () => {
+      window.removeEventListener('mousemove', move)
+      window.removeEventListener('mouseup', up)
+      window.clearTimeout(longPressTimer.current)
+      const s = dragStartRef.current
+      dragStartRef.current = null
+      const active = marqueeActiveRef.current
+      marqueeActiveRef.current = false
+      const m = marqueeRef.current
+      setMarqueeBoth(null)
+      document.body.style.userSelect = ''
+      if (active && s && m && gridRef.current && (Math.abs(m.x2 - m.x1) > 3 || Math.abs(m.y2 - m.y1) > 3)) {
+        const files: string[] = []
+        const folders: string[] = []
+        gridRef.current.querySelectorAll<HTMLElement>('[data-selectable]').forEach((el) => {
+          const r = el.getBoundingClientRect()
+          const g = gridRef.current!.getBoundingClientRect()
+          const elRel = { left: r.left - g.left, top: r.top - g.top, right: r.right - g.left, bottom: r.bottom - g.top }
+          const hit = !(elRel.right < m.x1 || elRel.left > m.x2 || elRel.bottom < m.y1 || elRel.top > m.y2)
+          if (hit) {
+            const kind = el.dataset.selectable
+            if (kind?.startsWith('m:')) files.push(kind.slice(2))
+            else if (kind?.startsWith('f:')) folders.push(kind.slice(2))
+          }
+        })
+        if (files.length || folders.length) {
+          setSelected(files)
+          setSelectedFolders(folders)
+        }
+        suppressClickRef.current = true
+        window.setTimeout(() => { suppressClickRef.current = false }, 0)
+      }
+    }
+
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', up)
+    document.body.style.userSelect = 'none'
   }
 
   // ---- 渲染 ----
@@ -481,8 +541,13 @@ function ProjectFiles() {
       <Card
         size="small"
         hoverable
+        data-selectable={`m:${m.id}`}
         className={`file-card ${selected.includes(m.id) ? 'file-card-selected' : ''}`}
-        onClick={() => setPreview(m)}
+        onClick={(e) => {
+          if (suppressClickRef.current) return
+          if (e.shiftKey) { toggleSelect(m.id); return }
+          setPreview(m)
+        }}
         cover={
           <div style={{ height: view === 'small' ? 130 : 190, overflow: 'hidden', background: '#f0f2f5', position: 'relative' }}>
             {thumb ? (
@@ -567,41 +632,101 @@ function ProjectFiles() {
           <div style={{ padding: '12px 12px 4px' }}>
             <Input
               prefix={<SearchOutlined />}
-              placeholder="搜索文件夹"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
+              placeholder="搜索船舱"
+              value={pointKeyword}
+              onChange={(e) => setPointKeyword(e.target.value)}
               allowClear
             />
           </div>
-          <div style={{ padding: '0 12px 8px' }}>
-            <Tree
-              treeData={treeData}
-              defaultExpandAll
-              onSelect={onSelectTree}
-              selectedKeys={folderId ? [folderId] : ['root']}
-            />
-          </div>
-          <div style={{ padding: '0 12px 12px' }}>
-            <Button block icon={<FolderAddOutlined />} disabled={!canFolder} onClick={() => setNewFolderOpen(true)}>
-              新建文件夹
-            </Button>
+          <div style={{ padding: '0 8px 8px', maxHeight: 'calc(100vh - 150px)', overflow: 'auto' }}>
+            <div
+              onClick={() => {
+                setPointFilter('all')
+                setFolderId(null)
+                setSelected([])
+                setSelectedFolders([])
+              }}
+              style={{
+                padding: '8px 12px',
+                cursor: 'pointer',
+                borderRadius: 6,
+                marginBottom: 4,
+                background: pointFilter === 'all' ? '#e6f4ff' : 'transparent',
+                color: pointFilter === 'all' ? '#1677ff' : 'inherit',
+                fontWeight: pointFilter === 'all' ? 600 : 400,
+              }}
+            >
+              全部船舱
+            </div>
+            {points
+              .filter((p) => p.name.toLowerCase().includes(pointKeyword.toLowerCase()))
+              .map((p) => {
+                const count = db.materials.filter((m) => m.pointId === p.id && m.status === '正常').length
+                const active = pointFilter === p.id
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => {
+                      setPointFilter(p.id)
+                      setFolderId(null)
+                      setSelected([])
+                      setSelectedFolders([])
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      borderRadius: 6,
+                      marginBottom: 4,
+                      background: active ? '#e6f4ff' : 'transparent',
+                      color: active ? '#1677ff' : 'inherit',
+                      fontWeight: active ? 600 : 400,
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>{p.name}</span>
+                      <span className="muted" style={{ fontSize: 12 }}>
+                        {count}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
           </div>
         </Sider>
       )}
 
       <Content style={{ padding: isMobile ? 8 : 12, overflow: 'auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          <span className="muted" style={{ fontSize: 13 }}>当前船舱</span>
+          <Tag color={pointFilter === 'all' ? 'default' : 'blue'}>
+            {pointFilter === 'all' ? '全部船舱' : (points.find((p) => p.id === pointFilter)?.name || '全部船舱')}
+          </Tag>
+        </div>
         <div className="toolbar" style={{ marginBottom: 8 }}>
           {isMobile ? (
-            <Select
-              style={{ flex: 1, minWidth: 0 }}
-              value={folderId || ''}
-              onChange={(v) => {
-                setFolderId(v || null)
-                setSelected([])
-                setSelectedFolders([])
-              }}
-              options={folderOptions}
-            />
+            <Space style={{ flex: 1, minWidth: 0 }} wrap>
+              <Select
+                style={{ width: 140 }}
+                value={pointFilter}
+                onChange={(v) => {
+                  setPointFilter(v)
+                  setFolderId(null)
+                  setSelected([])
+                  setSelectedFolders([])
+                }}
+                options={[{ value: 'all', label: '全部船舱' }, ...points.map((p) => ({ value: p.id, label: p.name }))]}
+              />
+              <Select
+                style={{ flex: 1, minWidth: 0 }}
+                value={folderId || ''}
+                onChange={(v) => {
+                  setFolderId(v || null)
+                  setSelected([])
+                  setSelectedFolders([])
+                }}
+                options={folderOptions}
+              />
+            </Space>
           ) : (
             <Breadcrumb
               style={{ flex: 1, minWidth: 0, fontSize: 15 }}
@@ -662,12 +787,6 @@ function ProjectFiles() {
                 ...(unitConfig.showFailed ? [{ value: '不合格', label: '不合格' }] : []),
               ]}
             />
-            <Select
-              value={pointFilter}
-              style={{ width: isMobile ? 150 : 160 }}
-              onChange={setPointFilter}
-              options={[{ value: 'all', label: '全部船舱' }, ...points.map((p) => ({ value: p.id, label: p.name }))]}
-            />
             <TreeSelect
               treeCheckable
               showCheckedStrategy={TreeSelect.SHOW_PARENT}
@@ -695,6 +814,7 @@ function ProjectFiles() {
           </Space>
           <div style={{ marginLeft: 'auto' }}>
             <Space>
+              <span className="muted" style={{ fontSize: 12 }}>按住左键拖动/长按可框选</span>
               <Tooltip title="大缩略图">
                 <Button icon={<AppstoreOutlined />} size={isMobile ? 'small' : 'middle'} type={view === 'grid' ? 'primary' : 'default'} onClick={() => setView('grid')} />
               </Tooltip>
@@ -708,14 +828,25 @@ function ProjectFiles() {
           </div>
         </div>
 
-        <Row gutter={[12, 12]}>
-          {childFolders.map((f) => (
-            <Col xs={12} sm={12} md={8} lg={6} xl={4} key={f.id}>
-              <Card
-                size="small"
-                hoverable
-                className={selectedFolders.includes(f.id) ? 'file-card-selected' : ''}
-                onClick={() => { setFolderId(f.id); setSelectedFolders([]) }}
+        <div
+          ref={gridRef}
+          style={{ position: 'relative' }}
+          onMouseDown={onGridMouseDown}
+        >
+          <Row gutter={[12, 12]}>
+            {childFolders.map((f) => (
+              <Col xs={12} sm={12} md={8} lg={6} xl={4} key={f.id}>
+                <Card
+                  size="small"
+                  hoverable
+                  data-selectable={`f:${f.id}`}
+                  className={selectedFolders.includes(f.id) ? 'file-card-selected' : ''}
+                  onClick={(e) => {
+                    if (suppressClickRef.current) return
+                    if (e.shiftKey) { toggleFolderSelect(f.id); return }
+                    setFolderId(f.id)
+                    setSelectedFolders([])
+                  }}
                 cover={
                   <div style={{ position: 'absolute', top: 6, right: 6, zIndex: 2 }}>
                     <Checkbox
@@ -748,7 +879,13 @@ function ProjectFiles() {
             columns={tableColumns}
             dataSource={childMaterials}
             pagination={false}
-            onRow={(r) => ({ onClick: () => setPreview(r) })}
+            onRow={(r) => ({
+              onClick: (ev: React.MouseEvent) => {
+                if (suppressClickRef.current) return
+                if (ev.shiftKey) { toggleSelect(r.id); return }
+                setPreview(r)
+              },
+            })}
             locale={{ emptyText: <Empty description="暂无素材" /> }}
           />
         ) : (
@@ -767,6 +904,23 @@ function ProjectFiles() {
             )}
           </Row>
         )}
+
+          {marquee && (
+            <div
+              style={{
+                position: 'absolute',
+                left: marquee.x1,
+                top: marquee.y1,
+                width: marquee.x2 - marquee.x1,
+                height: marquee.y2 - marquee.y1,
+                border: '1px dashed #1677ff',
+                background: 'rgba(22,119,255,0.1)',
+                pointerEvents: 'none',
+                zIndex: 10,
+              }}
+            />
+          )}
+        </div>
 
         {(selected.length > 0 || selectedFolders.length > 0 || allChildIds.length > 0) && (
           <div className="batch-bar" style={isMobile ? { left: 12, right: 12 } : { left: 296, right: 28, marginTop: 12 }}>
@@ -925,7 +1079,7 @@ function ProjectFiles() {
         </Form>
       </Modal>
 
-      <Modal title="确认批量清除 EXIF" open={exifConfirm} onOk={doExif} onCancel={() => setExifConfirm(false)} okButtonProps={{ danger: true }}>
+      <Modal title="确认批量清除 EXIF" open={exifConfirm} onOk={doClearExif} onCancel={() => setExifConfirm(false)} okButtonProps={{ danger: true }}>
         <p>将清除选中的 {selected.length} 个照片的 GPS 与设备信息，<b>保留拍摄时间</b>。是否继续？</p>
       </Modal>
 
@@ -935,8 +1089,9 @@ function ProjectFiles() {
         projectId={projectId}
         parentFolderId={folderId}
         folderPath={folderPath}
+        defaultPointId={pointFilter !== 'all' ? pointFilter : undefined}
       />
-      <FilePreview material={preview} open={!!preview} onClose={() => setPreview(null)} />
+      <FilePreview material={preview} materials={childMaterials} onChange={setPreview} open={!!preview} onClose={() => setPreview(null)} />
       <ShareCreateModal
         open={shareOpen}
         onClose={() => setShareOpen(false)}

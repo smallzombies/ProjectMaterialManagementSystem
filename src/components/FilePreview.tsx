@@ -1,8 +1,9 @@
 ﻿import { useEffect, useRef, useState } from 'react'
 import { Modal, Descriptions, Tag, Divider, Input, Button, List, Avatar, Empty, Space, message, Grid, Select, Table, Radio, Tabs } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { SendOutlined, UserOutlined, PlusOutlined } from '@ant-design/icons'
+import { SendOutlined, UserOutlined, PlusOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons'
 import { useApp } from '../store/AppContext'
+import { materialsApi } from '../api/services'
 import { fmtSize, fmtDate, previewUrl } from '../utils/format'
 import { uid } from '../mock/db'
 import type { Approval, ExifData, Material } from '../types'
@@ -11,10 +12,12 @@ interface Props {
   material: Material | null
   open: boolean
   onClose: () => void
+  materials?: Material[]
+  onChange?: (m: Material) => void
 }
 
-function FilePreview({ material, open, onClose }: Props) {
-  const { db, refresh, update, currentUser, unitConfig } = useApp()
+function FilePreview({ material, open, onClose, materials, onChange }: Props) {
+  const { db, refresh, update, currentUser, unitConfig, loadProjectData } = useApp()
   const screens = Grid.useBreakpoint()
   const isMobile = !screens.md
   const [comment, setComment] = useState('')
@@ -30,6 +33,35 @@ function FilePreview({ material, open, onClose }: Props) {
     setApproval(material?.approval || '合格')
     initialTagsRef.current = material?.tags ? [...material.tags] : []
   }, [material?.id])
+
+  const list = materials && materials.length ? materials : null
+  const idx = list ? list.findIndex((m) => m.id === material?.id) : -1
+  const hasPrev = list ? idx > 0 : false
+  const hasNext = list ? idx >= 0 && idx < list.length - 1 : false
+  const goPrev = () => {
+    if (hasPrev && list && onChange) onChange(list[idx - 1])
+  }
+  const goNext = () => {
+    if (hasNext && list && onChange) onChange(list[idx + 1])
+  }
+
+  useEffect(() => {
+    if (!open || !list) return
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement
+      const tag = t.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || t.isContentEditable) return
+      if (e.key === 'ArrowLeft' && hasPrev) {
+        e.preventDefault()
+        goPrev()
+      } else if (e.key === 'ArrowRight' && hasNext) {
+        e.preventDefault()
+        goNext()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, list, hasPrev, hasNext, goPrev, goNext])
 
   if (!material) return null
 
@@ -87,20 +119,25 @@ function FilePreview({ material, open, onClose }: Props) {
     message.success('批注已提交')
   }
 
-  const handleTagChange = (tagIds: string[]) => {
-    const next = { ...db }
-    const mi = next.materials.findIndex((m) => m.id === material.id)
-    if (mi >= 0) next.materials[mi] = { ...material, tags: tagIds }
-    next.materialTags = [
-      ...next.materialTags.filter((t) => t.materialId !== material.id),
-      ...tagIds.map((t) => ({ materialId: material.id, tagId: t, userId: currentUser?.id || '', time: new Date().toISOString().slice(0, 19) })),
-    ]
-    update(next)
-    refresh()
-    message.success('标签已更新')
+  const handleTagChange = async (tagIds: string[]) => {
+    try {
+      const oldTags = material.tags || []
+      const toAdd = tagIds.filter((t) => !oldTags.includes(t))
+      const toRemove = oldTags.filter((t) => !tagIds.includes(t))
+      for (const t of toAdd) {
+        await materialsApi.addTags(material.id, [t])
+      }
+      for (const t of toRemove) {
+        await materialsApi.removeTag(material.id, t)
+      }
+      if (material.projectId) await loadProjectData(material.projectId)
+      message.success('标签已更新')
+    } catch {
+      message.error('标签更新失败')
+    }
   }
 
-  const createNewTag = () => {
+    const createNewTag = async () => {
     const name = tagSearch.trim()
     if (!name) {
       message.warning('请先输入标签名称')
@@ -108,36 +145,37 @@ function FilePreview({ material, open, onClose }: Props) {
     }
     const existing = db.tags.find((t) => t.name === name)
     if (existing) {
-      handleTagChange([...material.tags, existing.id])
+      await handleTagChange([...material.tags, existing.id])
       setTagSearch('')
-      message.success('已添加现有标签')
       return
     }
-    const next = { ...db }
-    let uncat = next.tags.find((t) => t.name === '未分类' && t.parentId === null)
-    if (!uncat) {
-      uncat = { id: uid('t'), parentId: null, name: '未分类' }
-      next.tags.push(uncat)
+    try {
+      const next = { ...db }
+      let uncat = next.tags.find((t) => t.name === '未分类' && t.parentId === null)
+      if (!uncat) {
+        uncat = { id: uid('t'), parentId: null, name: '未分类' }
+        next.tags.push(uncat)
+      }
+      const newTag = { id: uid('t'), parentId: uncat.id, name }
+      next.tags.push(newTag)
+      update(next)
+      await materialsApi.addTags(material.id, [newTag.id])
+      if (material.projectId) await loadProjectData(material.projectId)
+      setTagSearch('')
+      message.success(`已创建标签"${name}"并归入"未分类"`)
+    } catch {
+      message.error('标签创建失败')
     }
-    const newTag = { id: uid('t'), parentId: uncat.id, name }
-    next.tags.push(newTag)
-    next.materials = next.materials.map((m) =>
-      m.id === material.id ? { ...m, tags: [...m.tags, newTag.id] } : m,
-    )
-    next.materialTags.push({ materialId: material.id, tagId: newTag.id, userId: currentUser?.id || '', time: new Date().toISOString().slice(0, 19) })
-    update(next)
-    refresh()
-    setTagSearch('')
-    message.success(`已创建标签“${name}”并归入“未分类”`)
   }
 
-  const changePoint = (pointId?: string) => {
-    const next = { ...db }
-    const mi = next.materials.findIndex((m) => m.id === material.id)
-    next.materials[mi] = { ...material, pointId: pointId || undefined }
-    update(next)
-    refresh()
-    message.success('拍摄船舱已更新')
+    const changePoint = async (pointId?: string) => {
+    try {
+      await materialsApi.batchPoint([material.id], pointId || null)
+      if (material.projectId) await loadProjectData(material.projectId)
+      message.success('拍摄船舱已更新')
+    } catch {
+      message.error('船舱更新失败')
+    }
   }
 
   const changeApproval = (val: '合格' | '不合格') => {
@@ -303,7 +341,35 @@ function FilePreview({ material, open, onClose }: Props) {
       destroyOnClose
       style={isMobile ? { top: 8 } : undefined}
     >
-      {renderPreview()}
+      {list && list.length > 1 ? (
+        <div style={{ position: 'relative' }}>
+          <div style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', zIndex: 2 }}>
+            <Button shape="circle" size="large" icon={<LeftOutlined />} disabled={!hasPrev} onClick={goPrev} />
+          </div>
+          {renderPreview()}
+          <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', zIndex: 2 }}>
+            <Button shape="circle" size="large" icon={<RightOutlined />} disabled={!hasNext} onClick={goNext} />
+          </div>
+          <div
+            style={{
+              position: 'absolute',
+              left: '50%',
+              bottom: 8,
+              transform: 'translateX(-50%)',
+              zIndex: 2,
+              background: 'rgba(0,0,0,0.55)',
+              color: '#fff',
+              fontSize: 12,
+              padding: '2px 10px',
+              borderRadius: 10,
+            }}
+          >
+            {idx + 1} / {list.length}
+          </div>
+        </div>
+      ) : (
+        renderPreview()
+      )}
 
       <Divider style={{ margin: '16px 0' }} />
       <Descriptions column={2} size="small" bordered labelStyle={{ width: 100 }}>
@@ -362,7 +428,9 @@ function FilePreview({ material, open, onClose }: Props) {
         </Descriptions.Item>
         {unitConfig.showDetailMeta && (
           <Descriptions.Item label="EXIF">
-            {material.hasExif ? (
+            {material.type !== 'image' ? (
+              <Tag color="default">无信息</Tag>
+            ) : material.hasExif ? (
               <a onClick={() => setExifOpen(true)}>
                 <Tag color="orange" style={{ cursor: 'pointer', marginRight: 8 }}>含EXIF · 点击查看</Tag>
               </a>

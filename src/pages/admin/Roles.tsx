@@ -3,7 +3,7 @@ import { Card, Table, Tag, Button, Space, Modal, Form, Input, Select, Checkbox, 
 import type { ColumnsType } from 'antd/es/table'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import { useApp } from '../../store/AppContext'
-import { uid } from '../../mock/db'
+import { rolesApi } from '../../api/services'
 import type { Role, PermCode } from '../../types'
 
 const PERM_OPTIONS: { label: string; value: PermCode; group: string }[] = [
@@ -24,36 +24,39 @@ const PERM_OPTIONS: { label: string; value: PermCode; group: string }[] = [
 ]
 
 function Roles() {
-  const { db, refresh, update } = useApp()
+  const { db, reloadFromApi } = useApp()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Role | null>(null)
   const [form] = Form.useForm()
 
   const groups = Array.from(new Set(PERM_OPTIONS.map((p) => p.group)))
 
-  const submit = () => {
-    form.validateFields().then((v) => {
-      const next = { ...db }
+  const submit = async () => {
+    const v = await form.validateFields()
+    try {
+      const body = { name: v.name, scope: v.scope, perms: v.perms || [] }
       if (editing) {
-        const i = next.roles.findIndex((r) => r.id === editing.id)
-        next.roles[i] = { ...editing, name: v.name, scope: v.scope, perms: v.perms }
+        await rolesApi.update(editing.id, body)
         message.success('角色已更新')
       } else {
-        next.roles.push({ id: uid('role'), name: v.name, scope: v.scope, perms: v.perms, isBuiltin: false })
+        await rolesApi.create(body)
         message.success('角色已创建')
       }
-      update(next)
-      refresh()
+      await reloadFromApi()
       setOpen(false)
-    })
+    } catch (e: any) {
+      message.error(e?.message || '操作失败')
+    }
   }
 
-  const remove = (r: Role) => {
-    const next = { ...db }
-    next.roles = next.roles.filter((x) => x.id !== r.id)
-    update(next)
-    refresh()
-    message.success('角色已删除')
+  const remove = async (r: Role) => {
+    try {
+      await rolesApi.remove(r.id)
+      await reloadFromApi()
+      message.success('角色已删除')
+    } catch (e: any) {
+      message.error(e?.message || '操作失败')
+    }
   }
 
   const columns: ColumnsType<Role> = [

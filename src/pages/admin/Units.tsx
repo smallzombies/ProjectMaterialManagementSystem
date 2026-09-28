@@ -3,32 +3,32 @@ import { Card, Table, Button, Space, Tag, Modal, Form, Input, Divider, Switch, m
 import type { ColumnsType } from 'antd/es/table'
 import { PlusOutlined, EditOutlined, DeleteOutlined, StopOutlined, CheckOutlined } from '@ant-design/icons'
 import { useApp } from '../../store/AppContext'
-import { uid } from '../../mock/db'
+import { unitsApi } from '../../api/services'
 import type { Unit, UnitConfig } from '../../types'
 
 const DEFAULT_CONFIG: UnitConfig = { showDetailMeta: true, showApproval: true, showFailed: true }
 
 function Units() {
-  const { db, refresh, update } = useApp()
+  const { db, reloadFromApi } = useApp()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Unit | null>(null)
   const [form] = Form.useForm()
 
-  const submit = () => {
-    form.validateFields().then((v) => {
-      const next = { ...db }
+  const submit = async () => {
+    const v = await form.validateFields()
+    try {
       if (editing) {
-        const i = next.units.findIndex((u) => u.id === editing.id)
-        next.units[i] = { ...editing, ...v, unitType: editing.unitType }
+        await unitsApi.update(editing.id, { name: v.name, config: v.config || DEFAULT_CONFIG })
         message.success('单位已更新')
       } else {
-        next.units.push({ id: uid('unit'), ...v, unitType: '内部', isEnabled: true, config: DEFAULT_CONFIG })
+        await unitsApi.create({ name: v.name, unitType: '内部', config: DEFAULT_CONFIG })
         message.success('单位已创建')
       }
-      update(next)
-      refresh()
+      await reloadFromApi()
       setOpen(false)
-    })
+    } catch (e: any) {
+      message.error(e?.message || '操作失败')
+    }
   }
 
   const openEdit = (u: Unit) => {
@@ -38,22 +38,24 @@ function Units() {
     setOpen(true)
   }
 
-  const toggleStatus = (u: Unit) => {
-    const next = { ...db }
-    const i = next.units.findIndex((x) => x.id === u.id)
-    next.units[i] = { ...u, isEnabled: !u.isEnabled }
-    update(next)
-    refresh()
-    message.success(u.isEnabled ? '单位已停用' : '单位已启用')
+  const toggleStatus = async (u: Unit) => {
+    try {
+      await unitsApi.update(u.id, { isEnabled: !u.isEnabled })
+      await reloadFromApi()
+      message.success(u.isEnabled ? '单位已停用' : '单位已启用')
+    } catch (e: any) {
+      message.error(e?.message || '操作失败')
+    }
   }
 
-  const remove = (u: Unit) => {
-    const next = { ...db }
-    next.units = next.units.filter((x) => x.id !== u.id)
-    next.users = next.users.map((x) => (x.unitId === u.id ? { ...x, unitId: undefined } : x))
-    update(next)
-    refresh()
-    message.success('单位已删除')
+  const remove = async (u: Unit) => {
+    try {
+      await unitsApi.remove(u.id)
+      await reloadFromApi()
+      message.success('单位已删除')
+    } catch (e: any) {
+      message.error(e?.message || '操作失败')
+    }
   }
 
   const columns: ColumnsType<Unit> = [

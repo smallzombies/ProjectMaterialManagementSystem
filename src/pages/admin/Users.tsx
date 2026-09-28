@@ -15,11 +15,11 @@ import {
 import type { ColumnsType } from 'antd/es/table'
 import { PlusOutlined, EditOutlined, DeleteOutlined, StopOutlined, CheckOutlined, SearchOutlined, AimOutlined } from '@ant-design/icons'
 import { useApp } from '../../store/AppContext'
-import { uid } from '../../mock/db'
+import { usersApi } from '../../api/services'
 import type { User } from '../../types'
 
 function Users() {
-  const { db, refresh, update } = useApp()
+  const { db, reloadFromApi } = useApp()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<User | null>(null)
   const [form] = Form.useForm()
@@ -39,39 +39,51 @@ function Users() {
       u.phone.includes(keyword),
   )
 
-  const submit = () => {
-    form.validateFields().then((v) => {
-      const next = { ...db }
-      const password = v.password || (editing ? editing.password : undefined) || '123456'
+  const submit = async () => {
+    const v = await form.validateFields()
+    try {
+      const body: any = {
+        name: v.name,
+        phone: v.phone,
+        unitId: v.unitId,
+        roleId: v.roleId,
+        projectIds: v.projectIds || [],
+        pointIds: v.pointIds || [],
+      }
       if (editing) {
-        const i = next.users.findIndex((u) => u.id === editing.id)
-        next.users[i] = { ...editing, ...v, password }
+        if (v.password) body.password = v.password
+        await usersApi.update(editing.id, body)
         message.success('用户已更新')
       } else {
-        next.users.push({ id: uid('u'), ...v, password, status: '启用' })
+        body.password = v.password || '123456'
+        await usersApi.create(body)
         message.success('用户已创建')
       }
-      update(next)
-      refresh()
+      await reloadFromApi()
       setOpen(false)
-    })
+    } catch (e: any) {
+      message.error(e?.message || '操作失败')
+    }
   }
 
-  const toggleStatus = (u: User) => {
-    const next = { ...db }
-    const i = next.users.findIndex((x) => x.id === u.id)
-    next.users[i] = { ...u, status: u.status === '启用' ? '停用' : '启用' }
-    update(next)
-    refresh()
-    message.success(u.status === '启用' ? '账号已停用' : '账号已启用')
+  const toggleStatus = async (u: User) => {
+    try {
+      await usersApi.update(u.id, { status: u.status === '启用' ? '停用' : '启用' })
+      await reloadFromApi()
+      message.success(u.status === '启用' ? '账号已停用' : '账号已启用')
+    } catch (e: any) {
+      message.error(e?.message || '操作失败')
+    }
   }
 
-  const remove = (u: User) => {
-    const next = { ...db }
-    next.users = next.users.filter((x) => x.id !== u.id)
-    update(next)
-    refresh()
-    message.success('用户已删除')
+  const remove = async (u: User) => {
+    try {
+      await usersApi.remove(u.id)
+      await reloadFromApi()
+      message.success('用户已删除')
+    } catch (e: any) {
+      message.error(e?.message || '操作失败')
+    }
   }
 
   const columns: ColumnsType<User> = [

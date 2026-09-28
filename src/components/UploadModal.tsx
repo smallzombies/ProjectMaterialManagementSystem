@@ -5,7 +5,7 @@ import type { UploadFile } from 'antd'
 import { useApp } from '../store/AppContext'
 import { typeOf, fmtSize } from '../utils/format'
 import { uid } from '../mock/db'
-import type { Material } from '../types'
+import { materialsApi, logsApi } from '../api/services'
 
 interface Props {
   open: boolean
@@ -13,10 +13,11 @@ interface Props {
   projectId: string
   parentFolderId: string | null
   folderPath: string
+  defaultPointId?: string
 }
 
-function UploadModal({ open, onClose, projectId, parentFolderId, folderPath }: Props) {
-  const { db, refresh, update, currentUser, can } = useApp()
+function UploadModal({ open, onClose, projectId, parentFolderId, folderPath, defaultPointId }: Props) {
+  const { db, currentUser, can, loadProjectData } = useApp()
   const [form] = Form.useForm()
   const [fileList, setFileList] = useState<UploadFile[]>([])
   const [progress, setProgress] = useState(0)
@@ -48,48 +49,40 @@ function UploadModal({ open, onClose, projectId, parentFolderId, folderPath }: P
     })
   }
 
-  const finishUpload = (v: { folderId?: string; pointId?: string }) => {
-    const next = { ...db }
+  const finishUpload = async (v: { folderId?: string; pointId?: string }) => {
     const now = new Date().toISOString().slice(0, 19)
     const targetFolder = v.folderId ?? parentFolderId
-    const files = fileList.map((f) => {
-      const size = f.size ?? 1024 * 1024
-      const name = f.name ?? 'file.bin'
-      const m: Material = {
-        id: uid('m'),
-        projectId,
-        folderId: targetFolder,
-        name,
-        type: typeOf(name),
-        size,
-        uploaderId: currentUser?.id || 'u_zhao',
-        uploadTime: now,
-        shootingTime: now,
-        pointId: v.pointId,
-        tags: [],
-        hasExif: typeOf(name) === 'image',
-        versions: [{ version: 1, storageKey: `key/${uid('k')}`, fileHash: `hash${uid('h')}`, size, createBy: currentUser?.id || 'u_zhao', createTime: now, note: '首次上传' }],
-        commentCount: 0,
-        status: '正常',
+    try {
+      for (const f of fileList) {
+        const size = f.size ?? 1024 * 1024
+        const name = f.name ?? 'file.bin'
+        const m = await materialsApi.create({
+          projectId,
+          folderId: targetFolder,
+          name,
+          type: typeOf(name),
+          size,
+          pointId: v.pointId,
+          shootingTime: now,
+          hasExif: typeOf(name) === 'image',
+          versions: [{ version: 1, storageKey: `key/${uid('k')}`, fileHash: `hash${uid('h')}`, size, createBy: currentUser?.id || '', createTime: now, note: '首次上传' }],
+        })
+        await logsApi.create({
+          materialId: m.id,
+          materialName: name,
+          projectId,
+          userId: currentUser?.id || '',
+          actionType: '上传',
+          detail: `上传至 ${folderPath || '根目录'}`,
+          ip: '10.0.0.88',
+        })
       }
-      next.logs.unshift({
-        id: uid('l'),
-        materialId: m.id,
-        materialName: name,
-        projectId,
-        userId: currentUser?.id || '',
-        actionType: '上传',
-        detail: `上传至 ${folderPath || '根目录'}`,
-        ip: '10.0.0.88',
-        createdAt: now,
-      })
-      return m
-    })
-    next.materials.push(...files)
-    update(next)
-    refresh()
-    message.success(`成功上传 ${files.length} 个文件`)
-    onCloseAll()
+      await loadProjectData(projectId)
+      message.success(`成功上传 ${fileList.length} 个文件`)
+      onCloseAll()
+    } catch (e: any) {
+      message.error(e.message || '上传失败')
+    }
   }
 
   const normalize = (f: UploadFile) => f as UploadFile
@@ -120,7 +113,7 @@ function UploadModal({ open, onClose, projectId, parentFolderId, folderPath }: P
             key: 'upload',
             label: '上传文件',
             children: (
-              <Form form={form} layout="vertical" initialValues={{ folderId: parentFolderId || undefined }}>
+              <Form form={form} layout="vertical" initialValues={{ folderId: parentFolderId || undefined, pointId: defaultPointId || undefined }}>
                 <Form.Item name="folderId" label="上传至文件夹">
                   <Select
                     allowClear

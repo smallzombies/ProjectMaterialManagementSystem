@@ -25,11 +25,11 @@ import {
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../store/AppContext'
-import { uid } from '../mock/db'
+import { projectsApi } from '../api/services'
 import type { Project } from '../types'
 
 function Projects() {
-  const { db, refresh, update, can, currentUser, isAdmin } = useApp()
+  const { db, reloadFromApi, can, currentUser, isAdmin } = useApp()
   const nav = useNavigate()
   const screens = Grid.useBreakpoint()
   const isMobile = !screens.md
@@ -54,49 +54,41 @@ function Projects() {
     setModalOpen(true)
   }
 
-  const submit = () => {
-    form.validateFields().then((v) => {
-      const next = { ...db }
+  const submit = async () => {
+    const v = await form.validateFields()
+    try {
       if (editing) {
-        const idx = next.projects.findIndex((p) => p.id === editing.id)
-        next.projects[idx] = { ...editing, ...v }
+        await projectsApi.update(editing.id, { name: v.name, code: v.code, ownerId: v.ownerId, status: v.status })
         message.success('项目已更新')
       } else {
-        next.projects.push({
-          id: uid('p'),
-          ...v,
-          status: '在建',
-          createdAt: new Date().toISOString().slice(0, 19),
-        })
+        await projectsApi.create({ name: v.name, code: v.code, ownerId: v.ownerId, status: '在建' })
         message.success('项目已创建')
       }
-      setDB(next)
+      await reloadFromApi()
       setModalOpen(false)
-    })
+    } catch (e: any) {
+      message.error(e?.message || '操作失败')
+    }
   }
 
-  // helper to keep TS simple
-  const setDB = (next: typeof db) => {
-    // 通过 localStorage 写入后刷新
-    update(next)
-    refresh()
+  const archive = async (p: Project) => {
+    try {
+      await projectsApi.update(p.id, { status: p.status === '在建' ? '归档' : '在建' })
+      await reloadFromApi()
+      message.success(p.status === '在建' ? '项目已归档' : '项目已恢复在建')
+    } catch (e: any) {
+      message.error(e?.message || '操作失败')
+    }
   }
 
-  const archive = (p: Project) => {
-    const next = { ...db }
-    const idx = next.projects.findIndex((x) => x.id === p.id)
-    next.projects[idx] = { ...p, status: p.status === '在建' ? '归档' : '在建' }
-    update(next)
-    refresh()
-    message.success(p.status === '在建' ? '项目已归档' : '项目已恢复在建')
-  }
-
-  const remove = (p: Project) => {
-    const next = { ...db }
-    next.projects = next.projects.filter((x) => x.id !== p.id)
-    update(next)
-    refresh()
-    message.success('项目已删除')
+  const remove = async (p: Project) => {
+    try {
+      await projectsApi.remove(p.id)
+      await reloadFromApi()
+      message.success('项目已删除')
+    } catch (e: any) {
+      message.error(e?.message || '操作失败')
+    }
   }
 
   const columns = [

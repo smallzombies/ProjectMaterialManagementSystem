@@ -13,11 +13,11 @@ import {
 } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import { useApp } from '../store/AppContext'
-import { uid } from '../mock/db'
+import { tagsApi } from '../api/services'
 import type { Tag as TagType } from '../types'
 
 function Tags() {
-  const { db, refresh, update, can, currentUser, isAdmin } = useApp()
+  const { db, reloadFromApi, can, currentUser, isAdmin } = useApp()
   const [modalOpen, setModalOpen] = useState(false)
   const [form] = Form.useForm()
   const [editing, setEditing] = useState<TagType | null>(null)
@@ -56,44 +56,37 @@ function Tags() {
     }))
   }
 
-  const submit = () => {
-    form.validateFields().then((v) => {
-      const next = { ...db }
+  const submit = async () => {
+    const v = await form.validateFields()
+    try {
+      const parentId = v.parentId ?? parentForCreate ?? null
       if (editing) {
-        const i = next.tags.findIndex((t) => t.id === editing.id)
-        next.tags[i] = { ...editing, name: v.name, parentId: v.parentId ?? null }
+        await tagsApi.update(editing.id, { name: v.name, parentId })
         message.success('标签已更新')
       } else {
-        next.tags.push({ id: uid('t'), parentId: (v.parentId ?? parentForCreate) || null, name: v.name })
+        await tagsApi.create({ name: v.name, parentId })
         message.success('标签已创建')
       }
-      update(next)
-      refresh()
+      await reloadFromApi()
       setModalOpen(false)
       setEditing(null)
       setParentForCreate(null)
-    })
-  }
-
-  const deleteTag = (t: TagType) => {
-    const next = { ...db }
-    next.tags = next.tags.filter((x) => x.id !== t.id)
-    const allIds = new Set<string>([t.id])
-    const walk = (pid: string) => {
-      db.tags.filter((x) => x.parentId === pid).forEach((x) => {
-        allIds.add(x.id)
-        walk(x.id)
-      })
+    } catch (e: any) {
+      message.error(e?.message || '操作失败')
     }
-    walk(t.id)
-    next.materials = next.materials.map((m) => ({ ...m, tags: m.tags.filter((x) => !allIds.has(x)) }))
-    next.materialTags = next.materialTags.filter((x) => !allIds.has(x.tagId))
-    update(next)
-    refresh()
-    message.success('标签已删除')
   }
 
-  const onDrop: React.ComponentProps<typeof Tree>['onDrop'] = (info) => {
+  const deleteTag = async (t: TagType) => {
+    try {
+      await tagsApi.remove(t.id)
+      await reloadFromApi()
+      message.success('标签已删除')
+    } catch (e: any) {
+      message.error(e?.message || '操作失败')
+    }
+  }
+
+  const onDrop: React.ComponentProps<typeof Tree>['onDrop'] = async (info) => {
     const dragKey = String(info.dragNode.key)
     const dropKey = String(info.node.key)
     const drag = db.tags.find((t) => t.id === dragKey)
@@ -119,9 +112,13 @@ function Tags() {
     const next = { ...db }
     const i = next.tags.findIndex((t) => t.id === drag.id)
     next.tags[i] = { ...drag, parentId: newParentId }
-    update(next)
-    refresh()
-    message.success('标签已移动')
+    try {
+      await tagsApi.update(drag.id, { parentId: newParentId })
+      await reloadFromApi()
+      message.success('标签已移动')
+    } catch (e: any) {
+      message.error(e?.message || '操作失败')
+    }
   }
 
   const hasData = db.tags.length > 0

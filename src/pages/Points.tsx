@@ -18,13 +18,13 @@ import {
 import type { ColumnsType } from 'antd/es/table'
 import { PlusOutlined, ImportOutlined, ExportOutlined, EditOutlined, DeleteOutlined, StopOutlined, AimOutlined, HistoryOutlined } from '@ant-design/icons'
 import { useApp } from '../store/AppContext'
-import { uid } from '../mock/db'
+import { pointsApi } from '../api/services'
 import { thumbUrl, TYPE_LABEL } from '../utils/format'
 import type { Material, Point } from '../types'
 import FilePreview from '../components/FilePreview'
 
 function Points() {
-  const { db, refresh, update } = useApp()
+  const { db, reloadFromApi } = useApp()
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Point | null>(null)
   const [projectFilter, setProjectFilter] = useState<string>('all')
@@ -33,30 +33,32 @@ function Points() {
 
   const visible = db.points.filter((p) => (projectFilter === 'all' ? true : p.projectId === projectFilter))
 
-  const submit = () => {
-    form.validateFields().then((v) => {
-      const next = { ...db }
+  const submit = async () => {
+    const v = await form.validateFields()
+    try {
+      const body = { projectId: v.projectId, name: v.name, code: v.code, lat: v.lat, lng: v.lng, remark: v.remark, status: v.status || '启用' }
       if (editing) {
-        const i = next.points.findIndex((p) => p.id === editing.id)
-        next.points[i] = { ...editing, ...v }
+        await pointsApi.update(editing.id, body)
         message.success('船舱已更新')
       } else {
-        next.points.push({ id: uid('pt'), ...v, status: '启用' })
+        await pointsApi.create(body)
         message.success('船舱已创建')
       }
-      update(next)
-      refresh()
+      await reloadFromApi()
       setModalOpen(false)
-    })
+    } catch (e: any) {
+      message.error(e?.message || '操作失败')
+    }
   }
 
-  const toggle = (p: Point) => {
-    const next = { ...db }
-    const i = next.points.findIndex((x) => x.id === p.id)
-    next.points[i] = { ...p, status: p.status === '启用' ? '停用' : '启用' }
-    update(next)
-    refresh()
-    message.success(p.status === '启用' ? '船舱已停用（不影响历史素材关联）' : '船舱已启用')
+  const toggle = async (p: Point) => {
+    try {
+      await pointsApi.update(p.id, { status: p.status === '启用' ? '停用' : '启用' })
+      await reloadFromApi()
+      message.success(p.status === '启用' ? '船舱已停用（不影响历史素材关联）' : '船舱已启用')
+    } catch (e: any) {
+      message.error(e?.message || '操作失败')
+    }
   }
 
   const columns: ColumnsType<Point> = [
@@ -83,12 +85,14 @@ function Points() {
           <Button size="small" type="link" icon={<EditOutlined />} onClick={() => { setEditing(r); form.setFieldsValue(r); setModalOpen(true) }}>编辑</Button>
           <Button size="small" type="link" icon={<StopOutlined />} iconPosition="end" onClick={() => toggle(r)}>{r.status === '启用' ? '停用' : '启用'}</Button>
           <Button size="small" type="link" icon={<HistoryOutlined />} onClick={() => setHistoryPoint(r)}>历史记录</Button>
-          <Popconfirm title="确定删除该船舱？已关联素材不删除" onConfirm={() => {
-            const next = { ...db }
-            next.points = next.points.filter((x) => x.id !== r.id)
-            update(next)
-            refresh()
-            message.success('船舱已删除')
+          <Popconfirm title="确定删除该船舱？已关联素材不删除" onConfirm={async () => {
+            try {
+              await pointsApi.remove(r.id)
+              await reloadFromApi()
+              message.success('船舱已删除')
+            } catch (e: any) {
+              message.error(e?.message || '删除失败')
+            }
           }}>
             <Button size="small" type="link" danger icon={<DeleteOutlined />} />
           </Popconfirm>

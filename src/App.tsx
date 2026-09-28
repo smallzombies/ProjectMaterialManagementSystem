@@ -18,9 +18,18 @@ import Roles from './pages/admin/Roles'
 import Transfer from './pages/admin/Transfer'
 
 function App() {
-  const { currentUser } = useApp()
+  const { token, authLoading } = useApp()
 
-  if (!currentUser) {
+  // 会话恢复中（刷新后 token 存在但未拉取用户信息）：保持当前路由，避免跳回首页
+  if (token && authLoading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#999' }}>
+        正在恢复会话…
+      </div>
+    )
+  }
+
+  if (!token) {
     return (
       <Routes>
         <Route path="/login" element={<Login />} />
